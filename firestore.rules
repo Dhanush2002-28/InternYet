@@ -32,9 +32,9 @@ service cloud.firestore {
         && (
           request.resource.data.role == 'student'
           || (request.resource.data.role == 'mentor'
-              && exists(/databases/$(database)/documents/approved/mentors/$(request.auth.token.email)))
+              && exists(/databases/$(database)/documents/approvedMentors/$(request.auth.token.email)))
           || (request.resource.data.role == 'admin'
-              && exists(/databases/$(database)/documents/roles/admins/$(request.auth.token.email)))
+              && exists(/databases/$(database)/documents/adminAllowlist/$(request.auth.token.email)))
         );
       allow update: if isSignedIn() && (
         // Student self-service: own profile fields only. Role, uid and createdAt are
@@ -77,14 +77,14 @@ service cloud.firestore {
       allow create, update, delete: if isSignedIn() && isMentorOrAdmin();
     }
 
-    match /approved/mentors/{email} {
+    match /approvedMentors/{email} {
       allow get: if isSignedIn() && (email == request.auth.token.email || myRole() == 'admin');
       allow list: if isSignedIn() && myRole() == 'admin';
       allow create, update: if isSignedIn() && myRole() == 'admin';
       allow delete: if isSignedIn() && myRole() == 'admin';
     }
 
-    match /roles/admins/{email} {
+    match /adminAllowlist/{email} {
       allow read: if isSignedIn() && myRole() == 'admin';
       allow write: if false;
     }

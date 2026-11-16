@@ -78,7 +78,7 @@ export async function deleteClass(id) {
 
 export async function getApprovedMentors() {
   if (!isFirebaseConfigured) return demo.demoGetAllApproved();
-  const snap = await getDocs(collection(db, "approved", "mentors"));
+  const snap = await getDocs(collection(db, "approvedMentors"));
   return snap.docs.map((d) => ({ email: d.id, ...d.data() }));
 }
 
@@ -87,7 +87,7 @@ export async function saveApprovedMentor(email, data) {
     demo.demoSaveApprovedMentor({ email, ...data });
     return;
   }
-  await setDoc(doc(db, "approved", "mentors", email), data);
+  await setDoc(doc(db, "approvedMentors", email), data);
 }
 
 export async function deleteApprovedMentor(email) {
@@ -95,7 +95,7 @@ export async function deleteApprovedMentor(email) {
     demo.demoDeleteApprovedMentor(email);
     return;
   }
-  await deleteDoc(doc(db, "approved", "mentors", email));
+  await deleteDoc(doc(db, "approvedMentors", email));
 }
 
 export function normalizeCertificateNumber(value) {

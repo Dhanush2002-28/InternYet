@@ -1,4 +1,4 @@
-import { emailjs } from "@emailjs/browser";
+import { send } from "@emailjs/browser";
 import { emailConfig, isEmailConfigured } from "../config/email";
 import { organization } from "../config/organization";
 import { formatDate } from "../utils/format";
@@ -12,7 +12,7 @@ async function dispatch(templateKey, params) {
     console.info(`[email] EmailJS not configured - skipped "${templateKey}" for ${params.email || "unknown recipient"}`);
     return { skipped: true };
   }
-  return emailjs.send(
+  return send(
     emailConfig.serviceId,
     emailConfig.templates[templateKey],
     params,

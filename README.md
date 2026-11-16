@@ -137,7 +137,7 @@ logged per skipped send). Full walkthrough: `email-templates/README.md`.
 | ------- | ---------------------------------------------------------------------------------- |
 | Student | Self-registration (Google or email/password). Offer letter generated on profile completion. |
 | Mentor  | **Admin** approves the mentor's **Google email** in Admin → Mentors. The mentor then signs in with that Google account; the first sign-in creates the mentor account (verified by Firestore rules). |
-| Admin   | One-time setup: in the Firebase console, create the document `roles/admins/<your-email>` in Firestore (empty doc is fine). Then sign in with that Google account — the first sign-in creates the admin account. |
+| Admin   | One-time setup: in the Firebase console, create the document `adminAllowlist/<your-email>` in Firestore (empty doc is fine). Then sign in with that Google account — the first sign-in creates the admin account. |
 
 Firestore rules (`firestore.rules`) enforce:
 
@@ -150,7 +150,7 @@ Firestore rules (`firestore.rules`) enforce:
   submission writes; QR rotation counter may only advance by +1; verifications are
   mentor/admin-only.
 - Only mentors/admins can list students and manage classes.
-- Only admins manage the approved-mentors list; the `roles/admins` list is console-managed only.
+- Only admins manage the approved-mentors list; the `adminAllowlist` list is console-managed only.
 
 ## Deploying to Vercel
 

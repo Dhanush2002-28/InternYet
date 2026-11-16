@@ -190,8 +190,8 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
   pending|submitted, payerName, payerBank, transactionRef (last 4 digits), proofUrl
   (base64 screenshot), assignedAt, submittedAt }` - one-shot after submit
 - `payment/verifications/{uid}` - `{ verified, verifiedAt, verifiedBy }` (mentor/admin write only)
-- `approved/mentors/{email}` — mentor allowlist (admin-managed)
-- `roles/admins/{email}` — admin allowlist (**client write: false** — console/SDK only)
+- `approvedMentors/{email}` — mentor allowlist (admin-managed)
+- `adminAllowlist/{email}` — admin allowlist (**client write: false** — console/SDK only)
 - `certificates/{number}` — **public read** (verification portal); contains only what is
   printed on the certificate (name, program, dates, issuer, status) — never add PII
   (email/phone/DOB) here
@@ -220,7 +220,7 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
 
 - `firestore.rules` (HARDENED after security audit - REDEPLOY after any change):
   - create: students self-create only as `student`; mentor creation requires an
-    `approved/mentors/{email}` entry; admin creation requires `roles/admins/{email}`
+    `approvedMentors/{email}` entry; admin creation requires `adminAllowlist/{email}`
     (`write: if false`).
   - update: students may edit ONLY their own profile fields - `role`/`uid`/`createdAt`
     immutable, `internship` writable once (to in-progress) before a mentor has set it,
@@ -285,7 +285,7 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
    the domain; put the 6 `VITE_FIREBASE_*` values in `.env`.
 3. **Deploy `firestore.rules`** to Firestore (mandatory — verify page, forum, chat and RBAC
    all depend on it; current version includes the payment collections AND the hardened users/notifications/counter rules from the security audit - re-read the rules file before deploying).
-4. Bootstrap admin: create doc `roles/admins/<your-email>` (empty doc ok) in the console;
+4. Bootstrap admin: create doc `adminAllowlist/<your-email>` (empty doc ok) in the console;
    sign in with that Google account → first sign-in creates the admin.
 5. Mentors: admin approves their Google email in Admin → Mentors; they sign in with it.
 6. Vercel: add the 6 `VITE_` vars to project environment (build time), deploy.

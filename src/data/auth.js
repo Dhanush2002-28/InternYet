@@ -38,8 +38,8 @@ export async function onAuthChange(callback) {
 async function resolveRole(email) {
   if (!isFirebaseConfigured || !email) return "student";
   const [adminSnap, mentorSnap] = await Promise.allSettled([
-    getDoc(doc(db, "roles", "admins", email)),
-    getDoc(doc(db, "approved", "mentors", email))
+    getDoc(doc(db, "adminAllowlist", email)),
+    getDoc(doc(db, "approvedMentors", email))
   ]);
   if (adminSnap.status === "fulfilled" && adminSnap.value.exists()) return "admin";
   if (mentorSnap.status === "fulfilled" && mentorSnap.value.exists()) return "mentor";
