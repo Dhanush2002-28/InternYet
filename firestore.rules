@@ -1,0 +1,168 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myRole() {
+      return isSignedIn()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'none')
+        : 'none';
+    }
+
+    function isMentorOrAdmin() {
+      return myRole() == 'mentor' || myRole() == 'admin';
+    }
+
+    function myUid() {
+      return request.auth.uid;
+    }
+
+    function paymentAccepting() {
+      return get(/databases/$(database)/documents/payment/settings).data.get('accepting', true) != false;
+    }
+
+    match /users/{uid} {
+      allow get: if isSignedIn() && (uid == request.auth.uid || isMentorOrAdmin());
+      allow list: if isSignedIn() && isMentorOrAdmin();
+      allow create: if isSignedIn()
+        && uid == request.auth.uid
+        && (
+          request.resource.data.role == 'student'
+          || (request.resource.data.role == 'mentor'
+              && exists(/databases/$(database)/documents/approved/mentors/$(request.auth.token.email)))
+          || (request.resource.data.role == 'admin'
+              && exists(/databases/$(database)/documents/roles/admins/$(request.auth.token.email)))
+        );
+      allow update: if isSignedIn() && (
+        // Student self-service: own profile fields only. Role, uid and createdAt are
+        // immutable; internship may be set once (to in-progress) before a mentor has;
+        // offerLetter may be written once at first profile completion.
+        (uid == request.auth.uid
+          && resource.data.role == 'student'
+          && request.resource.data.role == 'student'
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'uid', 'createdAt']) == false
+          && (
+            request.resource.data.diff(resource.data).affectedKeys().hasAny(['internship']) == false
+            || (resource.data.internship == null && request.resource.data.internship.status == 'in-progress')
+          )
+          && (
+            request.resource.data.diff(resource.data).affectedKeys().hasAny(['offerLetter']) == false
+            || resource.data.offerLetter == null
+          )
+        )
+        // Mentors/admins: may only write the internship block on student records
+        // (completion, certificate issue/revoke). Roles are immutable by the app.
+        || (isMentorOrAdmin()
+          && resource.data.role == 'student'
+          && request.resource.data.role == 'student'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['internship']))
+      );
+      allow delete: if false;
+
+      match /notifications/{nid} {
+        allow read: if isSignedIn() && uid == request.auth.uid;
+        // A user may only write to their own inbox; staff may notify any user.
+        allow create: if isSignedIn() && (uid == request.auth.uid || isMentorOrAdmin());
+        allow update: if isSignedIn() && uid == request.auth.uid;
+        allow delete: if false;
+      }
+    }
+
+    match /classes/{id} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isMentorOrAdmin();
+    }
+
+    match /approved/mentors/{email} {
+      allow get: if isSignedIn() && (email == request.auth.token.email || myRole() == 'admin');
+      allow list: if isSignedIn() && myRole() == 'admin';
+      allow create, update: if isSignedIn() && myRole() == 'admin';
+      allow delete: if isSignedIn() && myRole() == 'admin';
+    }
+
+    match /roles/admins/{email} {
+      allow read: if isSignedIn() && myRole() == 'admin';
+      allow write: if false;
+    }
+
+    match /certificates/{number} {
+      allow read: if true;
+      allow write: if isSignedIn() && isMentorOrAdmin();
+    }
+
+    match /counters/{id} {
+      allow read, write: if isSignedIn() && isMentorOrAdmin();
+    }
+
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == myUid();
+      allow update, delete: if false;
+
+      match /replies/{replyId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.authorUid == myUid();
+        allow update, delete: if false;
+      }
+    }
+
+    match /conversations/{convId} {
+      allow read: if isSignedIn() && myUid() in resource.data.participants;
+      allow create: if isSignedIn()
+        && request.resource.data.participants.size() == 2
+        && request.resource.data.participants.hasAny(myUid());
+      allow update: if isSignedIn() && myUid() in resource.data.participants;
+      allow delete: if false;
+
+      match /messages/{msgId} {
+        allow read, create: if isSignedIn()
+          && myUid() in get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+        allow update, delete: if false;
+      }
+    }
+
+    match /payment {
+      match /qrcodes/{slot} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && myRole() == 'admin';
+      }
+
+      match /counters/{key} {
+        allow read: if isSignedIn();
+        // Rotation counter may only advance by exactly 1 (per assignment).
+        allow write: if isSignedIn()
+          && (resource == null || request.resource.data.value == resource.data.value + 1);
+      }
+
+      match /settings {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && myRole() == 'admin';
+      }
+
+      match /submissions/{uid} {
+        allow read: if isSignedIn() && (uid == request.auth.uid || isMentorOrAdmin());
+        allow create: if isSignedIn()
+          && uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && paymentAccepting();
+        allow update: if isSignedIn()
+          && uid == request.auth.uid
+          && !resource.data.submittedAt
+          && paymentAccepting();
+        allow delete: if false;
+      }
+
+      match /verifications/{uid} {
+        allow read: if isSignedIn() && (uid == request.auth.uid || isMentorOrAdmin());
+        allow write: if isSignedIn() && isMentorOrAdmin();
+        allow delete: if false;
+      }
+    }
+  }
+}

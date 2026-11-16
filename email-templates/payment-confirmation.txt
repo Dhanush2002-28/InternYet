@@ -1,0 +1,38 @@
+Subject: Payment verified — {{organization}} internship
+To: {{email}}
+
+Hello {{student_name}},
+
+Good news — your internship fee payment of <strong>{{fee}}</strong> has been verified. Your portal modules (classes, forum, offer letter, certificate) are now fully unlocked.
+
+<table cellpadding="0" cellspacing="0" style="margin: 20px 0; width: 100%; border-collapse: collapse;">
+  <tr>
+    <td style="padding: 8px 12px; background: #ecfdf5; border-radius: 8px; font-size: 14px; color: #546E7A;">Paid from</td>
+    <td style="padding: 8px 12px; background: #ecfdf5; border-radius: 8px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{{payer_name}}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 12px; font-size: 14px; color: #546E7A;">Bank / UPI app</td>
+    <td style="padding: 8px 12px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{{payer_bank}}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 12px; background: #f8fafc; border-radius: 8px; font-size: 14px; color: #546E7A;">QR used</td>
+    <td style="padding: 8px 12px; background: #f8fafc; border-radius: 8px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">QR-{{qr_slot}}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 12px; font-size: 14px; color: #546E7A;">Transaction ID (last 4 digits)</td>
+    <td style="padding: 8px 12px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{{transaction_ref}}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 12px; background: #f8fafc; border-radius: 8px; font-size: 14px; color: #546E7A;">Verified by</td>
+    <td style="padding: 8px 12px; background: #f8fafc; border-radius: 8px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{{verified_by}}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 12px; font-size: 14px; color: #546E7A;">Verified on</td>
+    <td style="padding: 8px 12px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{{verified_at}}</td>
+  </tr>
+</table>
+
+No further action is needed. You can now pick up where you left off in your student portal.
+
+Warm regards,<br>
+{{organization}} Internship Portal

@@ -1,0 +1,39 @@
+Subject: Your internship offer letter from {{organization}} ({{offer_number}})
+To: {{email}}
+
+Hello {{student_name}},
+
+Congratulations! You have been selected for the <strong>{{program}}</strong> at {{organization}}. Your offer letter has been generated — details below.
+
+<table cellpadding="0" cellspacing="0" style="margin: 20px 0; width: 100%; border-collapse: collapse;">
+  <tr>
+    <td style="padding: 8px 12px; background: #eef2ff; border-radius: 8px; font-size: 14px; color: #546E7A;">Offer letter number</td>
+    <td style="padding: 8px 12px; background: #eef2ff; border-radius: 8px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{{offer_number}}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 12px; font-size: 14px; color: #546E7A;">Program</td>
+    <td style="padding: 8px 12px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{{program}}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 12px; background: #f8fafc; border-radius: 8px; font-size: 14px; color: #546E7A;">Duration</td>
+    <td style="padding: 8px 12px; background: #f8fafc; border-radius: 8px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{{duration}}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 12px; font-size: 14px; color: #546E7A;">Stipend</td>
+    <td style="padding: 8px 12px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{{stipend}}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 12px; background: #f8fafc; border-radius: 8px; font-size: 14px; color: #546E7A;">Issued on</td>
+    <td style="padding: 8px 12px; background: #f8fafc; border-radius: 8px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{{issued_at}}</td>
+  </tr>
+</table>
+
+The signed PDF of your offer letter is available any time in your student portal under <strong>Offer Letter</strong> (sign in with the account you registered with).
+
+To begin, please complete the payment step in the portal when prompted.
+
+If you have questions, reply to this email or reach us at {{contact_email}} / {{contact_phone}}.
+
+Warm regards,<br>
+{{organization}}<br>
+<span style="color: #546E7A; font-size: 13px;">Internship Programs</span>

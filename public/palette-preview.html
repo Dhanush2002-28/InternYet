@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palette Preview — InternYet</title>
+<style>
+  :root{ --pv-bg:#0B1120; --pv-ink:#E2E8F0; --pv-muted:#8FA0B8; --pv-line:#1E2A44; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--pv-bg);color:var(--pv-ink);font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{width:80%;margin:0 auto}
+
+  .pv-topbar{position:sticky;top:0;z-index:60;background:rgba(11,17,32,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--pv-line)}
+  .pv-topbar .wrap{display:flex;align-items:center;gap:16px;height:58px}
+  .pv-brand{font-weight:700;font-size:15px;letter-spacing:.2px}
+  .pv-brand span{color:#64748B;font-weight:500;font-size:13px;margin-left:10px}
+  .pv-toggle{margin-left:auto;display:flex;background:#111A30;border:1px solid var(--pv-line);border-radius:999px;padding:3px}
+  .pv-toggle button{border:0;background:transparent;color:#8FA0B8;font:600 13px/1 inherit;font-family:inherit;padding:7px 16px;border-radius:999px;cursor:pointer;transition:.15s}
+  .pv-toggle button.active{background:#2E5BFF;color:#fff}
+
+  section.option{border-top:1px solid var(--pv-line);padding:46px 0 70px}
+  section.option h2{font-size:23px;font-weight:700;color:#F1F5F9}
+  section.option h2 span{color:#64748B;font-weight:500;font-size:16px;margin-left:8px}
+  .bestfor{font-style:italic;color:var(--pv-muted);font-size:13.5px;margin:6px 0 16px}
+  .why{font-size:13px;color:var(--pv-muted);margin-top:10px;max-width:92ch;line-height:1.55}
+  .why b{color:#CBD5E1}
+  .note{font-size:12px;color:#5B6B84;margin-top:8px}
+
+  table.swatches{width:100%;border-collapse:collapse;margin:6px 0 20px;font-size:13px}
+  table.swatches th{text-align:left;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#64748B;padding:8px 10px;border-bottom:1px solid var(--pv-line)}
+  table.swatches td{padding:9px 10px;border-bottom:1px solid rgba(30,42,68,.6);color:#CBD5E1}
+  .chip{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#94A3B8;font-family:ui-monospace,Consolas,monospace}
+  .chip i{width:16px;height:16px;border-radius:4px;border:1px solid rgba(255,255,255,.28);display:inline-block}
+
+  .gradbar-row{display:flex;align-items:center;gap:14px;margin:0 0 26px}
+  .gradbar-row label{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#64748B;width:250px}
+  .gradbar{height:42px;flex:1;border-radius:12px;background:var(--accent)}
+
+  .mock-label{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:#64748B;margin:22px 0 8px}
+  .mock{border:1px solid var(--pv-line);border-radius:18px;overflow:hidden;background:var(--bg);transition:background .25s}
+
+  /* ============ 1 — LEDGER: warm paper, warm ink, oxblood ============ */
+  .opt1{
+    --bg:#FAF7F1;--surface:#FFFEFB;--elevated:#F3EEE4;--row-hover:#F6F2EA;--field:#FFFEFB;
+    --ink:#1A1611;--muted:#6E6459;--line:#E6E0D3;--line-soft:#EFEAE0;--soft:#F5F1E8;
+    --accent:#8A3033;--accent-ink:#FBF6F0;--grad:#8A3033;
+    --hero-bg:linear-gradient(180deg,#FAF7F1 0%,#F4EFE4 100%);
+    --shadow:0 1px 2px rgba(26,22,17,.05),0 10px 24px -14px rgba(26,22,17,.13);
+    --shadow-lg:0 24px 48px -20px rgba(26,22,17,.22);
+    --ok:#3D6B4F;--ok-soft:#E9F1EA;--ok-line:#C9DECF;
+    --warn:#8A5A12;--warn-soft:#F7F0DF;--warn-line:#E6D7B4;
+    --bad:#9C3B2E;--bad-soft:#F8ECE9;--bad-line:#EACDC7;
+  }
+  html.dark .opt1{
+    --bg:#171310;--surface:#211B16;--elevated:#2F2721;--row-hover:#28211B;--field:#28211B;
+    --ink:#EDE6DA;--muted:#A3968A;--line:#3A3129;--line-soft:#2E2721;--soft:#2A231D;
+    --accent:#C4574F;--accent-ink:#200F0C;--grad:#C4574F;
+    --hero-bg:linear-gradient(180deg,#171310 0%,#1C1712 100%);
+    --shadow:none;--shadow-lg:0 24px 48px -20px rgba(0,0,0,.5);
+    --ok:#8FC7A4;--ok-soft:rgba(143,199,164,.13);--ok-line:rgba(143,199,164,.3);
+    --warn:#D9B44A;--warn-soft:rgba(217,180,74,.13);--warn-line:rgba(217,180,74,.32);
+    --bad:#E09A8F;--bad-soft:rgba(224,154,143,.13);--bad-line:rgba(224,154,143,.3);
+  }
+  html.pureblack .opt1{
+    --bg:#000000;--surface:#15110D;--elevated:#221B15;--row-hover:#1B1611;--field:#1B1611;
+    --soft:#1D1813;--line-soft:#1F1A14;--line:#362D24;
+    --hero-bg:linear-gradient(180deg,#000000 0%,#0A0806 100%);
+  }
+
+  /* ============ 2 — WORKWEAR: harbor navy, signal orange ============ */
+  .opt2{
+    --bg:#F3F5F7;--surface:#FFFFFF;--elevated:#E9EDF1;--row-hover:#F0F3F6;--field:#FFFFFF;
+    --ink:#182A3A;--muted:#5D6C7C;--line:#D9DFE6;--line-soft:#E7EBEF;--soft:#EDF0F4;
+    --accent:#E0501F;--accent-ink:#FFF8F4;--grad:#E0501F;
+    --hero-bg:linear-gradient(180deg,#F3F5F7 0%,#ECF0F4 100%);
+    --shadow:0 1px 2px rgba(24,42,58,.05),0 10px 24px -14px rgba(24,42,58,.13);
+    --shadow-lg:0 24px 48px -20px rgba(24,42,58,.2);
+    --ok:#2E6E4E;--ok-soft:#E7F2EC;--ok-line:#C3DECE;
+    --warn:#8A5A12;--warn-soft:#F7F0DF;--warn-line:#E6D7B4;
+    --bad:#A93B31;--bad-soft:#F9ECEA;--bad-line:#ECCCC7;
+  }
+  html.dark .opt2{
+    --bg:#0F151C;--surface:#19222C;--elevated:#253140;--row-hover:#202B37;--field:#1F2935;
+    --ink:#E4EAF0;--muted:#8C9BA9;--line:#2F3C4B;--line-soft:#26313E;--soft:#222E3B;
+    --accent:#FF6B35;--accent-ink:#211005;--grad:#FF6B35;
+    --hero-bg:linear-gradient(180deg,#0F151C 0%,#131A23 100%);
+    --shadow:none;--shadow-lg:0 24px 48px -20px rgba(0,0,0,.5);
+    --ok:#8FC7A4;--ok-soft:rgba(143,199,164,.13);--ok-line:rgba(143,199,164,.3);
+    --warn:#D9B44A;--warn-soft:rgba(217,180,74,.13);--warn-line:rgba(217,180,74,.32);
+    --bad:#E09A8F;--bad-soft:rgba(224,154,143,.13);--bad-line:rgba(224,154,143,.3);
+  }
+  html.pureblack .opt2{
+    --bg:#000000;--surface:#11161C;--elevated:#1D242E;--row-hover:#171D25;--field:#161C24;
+    --soft:#191F28;--line-soft:#1C232D;--line:#333F4E;
+    --hero-bg:linear-gradient(180deg,#000000 0%,#080A0D 100%);
+  }
+
+  /* ============ 3 — WINE & BONE: plum ink, berry ============ */
+  .opt3{
+    --bg:#FAF7F5;--surface:#FFFFFF;--elevated:#F1E9EA;--row-hover:#F7F2F3;--field:#FFFFFF;
+    --ink:#2B2126;--muted:#77696F;--line:#E7DEE0;--line-soft:#F0EAEA;--soft:#F5F0F1;
+    --accent:#6D2E46;--accent-ink:#FBF4F6;--grad:#6D2E46;
+    --hero-bg:linear-gradient(180deg,#FAF7F5 0%,#F4EEF0 100%);
+    --shadow:0 1px 2px rgba(43,33,38,.05),0 10px 24px -14px rgba(43,33,38,.13);
+    --shadow-lg:0 24px 48px -20px rgba(43,33,38,.2);
+    --ok:#3D6B4F;--ok-soft:#E9F1EA;--ok-line:#C9DECF;
+    --warn:#8A5A12;--warn-soft:#F7F0DF;--warn-line:#E6D7B4;
+    --bad:#9C3B32;--bad-soft:#F8ECEA;--bad-line:#EACDC9;
+  }
+  html.dark .opt3{
+    --bg:#171114;--surface:#211920;--elevated:#302530;--row-hover:#291F27;--field:#281E26;
+    --ink:#EFE7EB;--muted:#A897A1;--line:#3B2F39;--line-soft:#2F252E;--soft:#2A2029;
+    --accent:#C2587E;--accent-ink:#220B14;--grad:#C2587E;
+    --hero-bg:linear-gradient(180deg,#171114 0%,#1C1519 100%);
+    --shadow:none;--shadow-lg:0 24px 48px -20px rgba(0,0,0,.5);
+    --ok:#8FC7A4;--ok-soft:rgba(143,199,164,.13);--ok-line:rgba(143,199,164,.3);
+    --warn:#D9B44A;--warn-soft:rgba(217,180,74,.13);--warn-line:rgba(217,180,74,.32);
+    --bad:#E09A8F;--bad-soft:rgba(224,154,143,.13);--bad-line:rgba(224,154,143,.3);
+  }
+  html.pureblack .opt3{
+    --bg:#000000;--surface:#140F12;--elevated:#20181E;--row-hover:#1A1317;--field:#191217;
+    --soft:#1B141A;--line-soft:#1E161C;--line:#352A33;
+    --hero-bg:linear-gradient(180deg,#000000 0%,#0A0709 100%);
+  }
+
+  /* ============ 4 — SWISS: bone white, ink, cobalt ============ */
+  .opt4{
+    --bg:#F7F8F9;--surface:#FFFFFF;--elevated:#EFF1F4;--row-hover:#F3F5F7;--field:#FFFFFF;
+    --ink:#16181D;--muted:#61666E;--line:#DFE3E8;--line-soft:#EBEDF1;--soft:#F2F4F7;
+    --accent:#2440C4;--accent-ink:#F7F9FF;--grad:#2440C4;
+    --hero-bg:linear-gradient(180deg,#F7F8F9 0%,#F2F4F7 100%);
+    --shadow:0 1px 2px rgba(22,24,29,.04),0 8px 20px -12px rgba(22,24,29,.1);
+    --shadow-lg:0 24px 48px -20px rgba(22,24,29,.16);
+    --ok:#2E6E4E;--ok-soft:#E7F2EC;--ok-line:#C3DECE;
+    --warn:#8A5A12;--warn-soft:#F7F0DF;--warn-line:#E6D7B4;
+    --bad:#B03A2E;--bad-soft:#F9ECEA;--bad-line:#ECCCC7;
+  }
+  html.dark .opt4{
+    --bg:#141619;--surface:#1D2025;--elevated:#2A2E35;--row-hover:#23272D;--field:#21252B;
+    --ink:#EFF1F4;--muted:#9AA0A8;--line:#33383F;--line-soft:#2A2E35;--soft:#24282F;
+    --accent:#4E6CE8;--accent-ink:#0A0F24;--grad:#4E6CE8;
+    --hero-bg:linear-gradient(180deg,#141619 0%,#181B20 100%);
+    --shadow:none;--shadow-lg:0 24px 48px -20px rgba(0,0,0,.55);
+    --ok:#8FC7A4;--ok-soft:rgba(143,199,164,.13);--ok-line:rgba(143,199,164,.3);
+    --warn:#D9B44A;--warn-soft:rgba(217,180,74,.13);--warn-line:rgba(217,180,74,.32);
+    --bad:#E09A8F;--bad-soft:rgba(224,154,143,.13);--bad-line:rgba(224,154,143,.3);
+  }
+  html.pureblack .opt4{
+    --bg:#000000;--surface:#121417;--elevated:#1F2228;--row-hover:#181B20;--field:#171A1F;
+    --soft:#191C21;--line-soft:#1C1F25;--line:#30353D;
+    --hero-bg:linear-gradient(180deg,#000000 0%,#08090B 100%);
+  }
+
+  /* ============ shared mock components (palette via vars) ============ */
+  .m-btn{border:1px solid transparent;border-radius:10px;padding:9px 18px;font:600 14px/1.2 inherit;font-family:inherit;cursor:pointer;transition:.15s}
+  .m-btn.primary{background:var(--grad);color:var(--accent-ink);box-shadow:var(--shadow)}
+  .m-btn.ghost{background:transparent;border-color:var(--line);color:var(--ink)}
+  .m-btn.sm{padding:7px 14px;font-size:13px;border-radius:9px}
+  .m-btn.block{width:100%;display:block;text-align:center}
+
+  .m-nav{display:flex;align-items:center;gap:26px;padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .m-logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;color:var(--ink)}
+  .m-logo i{width:11px;height:11px;border-radius:50%;background:var(--grad)}
+  .m-links{display:flex;gap:20px;font-size:13.5px;color:var(--muted)}
+  .m-links span{cursor:default}
+  .m-nav-right{margin-left:auto;display:flex;gap:10px}
+
+  .m-hero{display:grid;grid-template-columns:1.12fr .88fr;gap:34px;padding:46px 28px 30px;background:var(--hero-bg)}
+  .m-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--accent);background:var(--soft);border:1px solid var(--line)}
+  .m-badge i{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .m-title{font-size:34px;line-height:1.12;font-weight:750;letter-spacing:-.5px;color:var(--ink);margin:18px 0 14px}
+  .grad-text{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .m-sub{font-size:15px;line-height:1.65;color:var(--muted);max-width:48ch}
+  .m-actions{display:flex;gap:12px;margin:24px 0 28px}
+  .m-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .m-stat{background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+  .m-stat b{display:block;font-size:18px;color:var(--ink)}
+  .m-stat small{font-size:12px;color:var(--muted)}
+
+  .m-panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);overflow:hidden;align-self:start}
+  .m-panel-head{display:flex;align-items:center;gap:7px;padding:12px 16px;border-bottom:1px solid var(--line-soft)}
+  .m-panel-head i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+  .m-panel-head span{margin-left:6px;font-size:12px;color:var(--muted)}
+  .m-panel-body{padding:16px}
+  .m-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+  .m-row i{width:26px;height:26px;border-radius:50%;background:var(--grad);flex:none;opacity:.9}
+  .m-row .bar{height:9px;border-radius:5px;background:var(--soft);flex:1}
+  .m-row .bar.filled{background:var(--grad);opacity:.8}
+  .m-bars{display:flex;gap:8px;align-items:flex-end;height:74px;margin:16px 0 14px}
+  .m-bars i{flex:1;border-radius:6px 6px 0 0;background:var(--grad);opacity:.85}
+
+  .m-features{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:10px 28px 28px;background:var(--hero-bg)}
+  .m-fcard{background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+  .m-fcard i{display:flex;width:34px;height:34px;border-radius:10px;align-items:center;justify-content:center;background:var(--grad);color:var(--accent-ink);font-style:normal;font-weight:700;font-size:15px}
+  .m-fcard b{display:block;font-size:15px;color:var(--ink);margin:12px 0 6px}
+  .m-fcard p{font-size:13px;line-height:1.55;color:var(--muted)}
+
+  .d-topbar{display:flex;align-items:center;gap:22px;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .d-tabs{display:flex;gap:4px}
+  .d-tab{padding:7px 13px;border-radius:9px;font-size:13.5px;font-weight:500;color:var(--muted)}
+  .d-tab.active{background:var(--soft);color:var(--ink);font-weight:600}
+  .d-avatar{margin-left:auto;width:31px;height:31px;border-radius:50%;background:var(--grad);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+  .d-body{padding:20px 24px 24px;background:var(--bg)}
+  .d-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .d-stat{background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+  .d-stat small{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+  .d-stat b{font-size:20px;color:var(--ink)}
+  .d-stat u{display:block;text-decoration:none;font-size:12px;color:var(--ok);margin-top:4px;font-weight:600}
+  .d-split{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;align-items:start}
+  .d-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+  .d-card-head{display:flex;align-items:baseline;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line-soft)}
+  .d-card-head b{font-size:14px;color:var(--ink)}
+  .d-card-head small{font-size:12px;color:var(--muted)}
+  table.dt{width:100%;border-collapse:collapse;font-size:13px}
+  table.dt th{text-align:left;padding:10px 16px;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);background:var(--soft);border-bottom:1px solid var(--line-soft)}
+  table.dt td{padding:11px 16px;border-bottom:1px solid var(--line-soft);color:var(--ink)}
+  table.dt tr:last-child td{border-bottom:0}
+  table.dt tbody tr:hover td{background:var(--row-hover)}
+  .pill{display:inline-flex;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;border:1px solid transparent}
+  .pill.ok{color:var(--ok);background:var(--ok-soft);border-color:var(--ok-line)}
+  .pill.warn{color:var(--warn);background:var(--warn-soft);border-color:var(--warn-line)}
+  .pill.bad{color:var(--bad);background:var(--bad-soft);border-color:var(--bad-line)}
+  .d-side{display:flex;flex-direction:column;gap:14px}
+  .d-box{padding:16px}
+  .d-box h4{font-size:14.5px;color:var(--ink);margin-bottom:4px}
+  .d-box .meta{font-size:12.5px;color:var(--muted);line-height:1.6}
+  .d-box .m-actions{margin:14px 0 0}
+  .m-input{width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);font-size:13.5px;margin-bottom:10px;font-family:inherit}
+  .m-input::placeholder{color:var(--muted)}
+
+  .footer-note{padding:34px 0 60px;text-align:center;color:#64748B;font-size:13px}
+  .footer-note b{color:#CBD5E1}
+  @media (max-width:1100px){.wrap{width:92%}.m-hero,.d-split{grid-template-columns:1fr}.m-features{grid-template-columns:1fr 1fr}.m-stats{grid-template-columns:1fr 1fr}.d-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="pv-topbar">
+  <div class="wrap">
+    <div class="pv-brand">PALETTE PREVIEW <span>InternYet — four palettes with a point of view, no gradients</span></div>
+    <div class="pv-toggle">
+      <button data-mode="light">Light</button>
+      <button data-mode="dark">Dark</button>
+      <button data-mode="pureblack">Pure black</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 1 — LEDGER ============ -->
+<section class="option opt1" id="option-1">
+  <div class="wrap">
+    <h2>1. "Ledger" <span>Warm Paper &amp; Oxblood</span></h2>
+    <p class="bestfor">Feels like: a well-bound accountant's ledger, letterpress, old money.</p>
+    <table class="swatches">
+      <tr><th style="width:26%">Element</th><th>Light (day)</th><th>Dark (night)</th><th>Used for</th></tr>
+      <tr><td>Base (Warm Paper)</td><td><span class="chip"><i style="background:#FAF7F1"></i>#FAF7F1</span></td><td><span class="chip"><i style="background:#171310"></i>#171310</span></td><td>Page background</td></tr>
+      <tr><td>Ink (Warm Near-Black)</td><td><span class="chip"><i style="background:#1A1611"></i>#1A1611</span></td><td><span class="chip"><i style="background:#EDE6DA"></i>#EDE6DA</span></td><td>Headings &amp; body text</td></tr>
+      <tr><td>Secondary (Taupe)</td><td><span class="chip"><i style="background:#6E6459"></i>#6E6459</span></td><td><span class="chip"><i style="background:#A3968A"></i>#A3968A</span></td><td>Meta text, borders</td></tr>
+      <tr><td>Accent (Oxblood)</td><td><span class="chip"><i style="background:#8A3033"></i>#8A3033</span></td><td><span class="chip"><i style="background:#C4574F"></i>#C4574F</span></td><td>CTAs, logo, highlights</td></tr>
+    </table>
+    <div class="gradbar-row"><label>Brand accent — flat, no gradient</label><div class="gradbar"></div></div>
+    <p class="why"><b>The idea:</b> paper, ink, and one stamp. Oxblood is the only colored thing on the page, so a button actually means something. Nothing glows, nothing fades into nothing else.</p>
+
+    <div class="mock-label">Landing page</div>
+    <div class="mock mock-slot-landing"></div>
+    <div class="mock-label">Student dashboard</div>
+    <div class="mock mock-slot-dash"></div>
+  </div>
+</section>
+
+<!-- ============ 2 — WORKWEAR ============ -->
+<section class="option opt2" id="option-2">
+  <div class="wrap">
+    <h2>2. "Workwear" <span>Harbor Navy &amp; Signal Orange</span></h2>
+    <p class="bestfor">Feels like: a canvas work jacket with an orange zipper pull. Industrial, energetic.</p>
+    <table class="swatches">
+      <tr><th style="width:26%">Element</th><th>Light (day)</th><th>Dark (night)</th><th>Used for</th></tr>
+      <tr><td>Base (Cool Paper)</td><td><span class="chip"><i style="background:#F3F5F7"></i>#F3F5F7</span></td><td><span class="chip"><i style="background:#0F151C"></i>#0F151C</span></td><td>Page background</td></tr>
+      <tr><td>Ink (Harbor Navy)</td><td><span class="chip"><i style="background:#182A3A"></i>#182A3A</span></td><td><span class="chip"><i style="background:#E4EAF0"></i>#E4EAF0</span></td><td>Headings &amp; body text</td></tr>
+      <tr><td>Secondary (Steel)</td><td><span class="chip"><i style="background:#5D6C7C"></i>#5D6C7C</span></td><td><span class="chip"><i style="background:#8C9BA9"></i>#8C9BA9</span></td><td>Meta text, borders</td></tr>
+      <tr><td>Accent (Signal Orange)</td><td><span class="chip"><i style="background:#E0501F"></i>#E0501F</span></td><td><span class="chip"><i style="background:#FF6B35"></i>#FF6B35</span></td><td>CTAs, logo, highlights</td></tr>
+    </table>
+    <div class="gradbar-row"><label>Brand accent — flat, no gradient</label><div class="gradbar"></div></div>
+    <p class="why"><b>The idea:</b> navy canvas with a safety-orange pull tab. High energy without pastels; the orange is small and deliberate, so it hits harder than a blue that's everywhere.</p>
+
+    <div class="mock-label">Landing page</div>
+    <div class="mock mock-slot-landing"></div>
+    <div class="mock-label">Student dashboard</div>
+    <div class="mock mock-slot-dash"></div>
+  </div>
+</section>
+
+<!-- ============ 3 — WINE & BONE ============ -->
+<section class="option opt3" id="option-3">
+  <div class="wrap">
+    <h2>3. "Wine &amp; Bone" <span>Plum Ink &amp; Berry</span></h2>
+    <p class="bestfor">Feels like: a wine label or a book jacket. Quiet, expensive, human.</p>
+    <table class="swatches">
+      <tr><th style="width:26%">Element</th><th>Light (day)</th><th>Dark (night)</th><th>Used for</th></tr>
+      <tr><td>Base (Bone)</td><td><span class="chip"><i style="background:#FAF7F5"></i>#FAF7F5</span></td><td><span class="chip"><i style="background:#171114"></i>#171114</span></td><td>Page background</td></tr>
+      <tr><td>Ink (Plum Black)</td><td><span class="chip"><i style="background:#2B2126"></i>#2B2126</span></td><td><span class="chip"><i style="background:#EFE7EB"></i>#EFE7EB</span></td><td>Headings &amp; body text</td></tr>
+      <tr><td>Secondary (Mauve Grey)</td><td><span class="chip"><i style="background:#77696F"></i>#77696F</span></td><td><span class="chip"><i style="background:#A897A1"></i>#A897A1</span></td><td>Meta text, borders</td></tr>
+      <tr><td>Accent (Berry)</td><td><span class="chip"><i style="background:#6D2E46"></i>#6D2E46</span></td><td><span class="chip"><i style="background:#C2587E"></i>#C2587E</span></td><td>CTAs, logo, highlights</td></tr>
+    </table>
+    <div class="gradbar-row"><label>Brand accent — flat, no gradient</label><div class="gradbar"></div></div>
+    <p class="why"><b>The idea:</b> plum-black ink on bone, berry for the call to action. Not "violet SaaS" — the plum is dark and dusty, closer to a bottle label than a landing page.</p>
+
+    <div class="mock-label">Landing page</div>
+    <div class="mock mock-slot-landing"></div>
+    <div class="mock-label">Student dashboard</div>
+    <div class="mock mock-slot-dash"></div>
+  </div>
+</section>
+
+<!-- ============ 4 — SWISS ============ -->
+<section class="option opt4" id="option-4">
+  <div class="wrap">
+    <h2>4. "Swiss" <span>Bone, Ink &amp; Cobalt</span></h2>
+    <p class="bestfor">Feels like: International Typographic Style — a grid, hairlines, one cobalt.</p>
+    <table class="swatches">
+      <tr><th style="width:26%">Element</th><th>Light (day)</th><th>Dark (night)</th><th>Used for</th></tr>
+      <tr><td>Base (Bone White)</td><td><span class="chip"><i style="background:#F7F8F9"></i>#F7F8F9</span></td><td><span class="chip"><i style="background:#141619"></i>#141619</span></td><td>Page background</td></tr>
+      <tr><td>Ink</td><td><span class="chip"><i style="background:#16181D"></i>#16181D</span></td><td><span class="chip"><i style="background:#EFF1F4"></i>#EFF1F4</span></td><td>Headings &amp; body text</td></tr>
+      <tr><td>Secondary</td><td><span class="chip"><i style="background:#61666E"></i>#61666E</span></td><td><span class="chip"><i style="background:#9AA0A8"></i>#9AA0A8</span></td><td>Meta text, hairlines</td></tr>
+      <tr><td>Accent (Cobalt)</td><td><span class="chip"><i style="background:#2440C4"></i>#2440C4</span></td><td><span class="chip"><i style="background:#4E6CE8"></i>#4E6CE8</span></td><td>CTAs, logo, highlights</td></tr>
+    </table>
+    <div class="gradbar-row"><label>Brand accent — flat, no gradient</label><div class="gradbar"></div></div>
+    <p class="why"><b>The idea:</b> everything neutral — bone, hairlines, ink — with a single cobalt that lands like a Swiss poster. The cobalt is deeper and less saturated than the usual "trust blue."</p>
+
+    <div class="mock-label">Landing page</div>
+    <div class="mock mock-slot-landing"></div>
+    <div class="mock-label">Student dashboard</div>
+    <div class="mock mock-slot-dash"></div>
+  </div>
+</section>
+
+<div class="footer-note">Pick <b>1–4</b> (or steal pieces: e.g. Workwear's navy ink with Ledger's paper) and I'll apply it across the whole app — CSS variables, hero, buttons, tables, pills, PDF accents.</div>
+
+<!-- ============ shared mock templates ============ -->
+<template id="tpl-landing">
+  <div class="m-nav">
+    <div class="m-logo"><i></i>InternYet</div>
+    <div class="m-links"><span>Features</span><span>What you get</span><span>Program</span><span>Eligibility</span></div>
+    <div class="m-nav-right">
+      <button class="m-btn ghost sm">Sign in</button>
+      <button class="m-btn primary sm">Get started</button>
+    </div>
+  </div>
+  <div class="m-hero">
+    <div>
+      <span class="m-badge"><i></i>Applications open — Summer 2026</span>
+      <h1 class="m-title">Intern with purpose.<br>Graduate with <em class="grad-text">proof</em>.</h1>
+      <p class="m-sub">Register once — get your offer letter, live classes on Google Meet, and an internship certificate generated automatically when you finish.</p>
+      <div class="m-actions">
+        <button class="m-btn primary">Get started</button>
+        <button class="m-btn ghost">Explore the program</button>
+      </div>
+      <div class="m-stats">
+        <div class="m-stat"><b>500+</b><small>Interns mentored</small></div>
+        <div class="m-stat"><b>12</b><small>Industry mentors</small></div>
+        <div class="m-stat"><b>96%</b><small>Completion rate</small></div>
+        <div class="m-stat"><b>8 wks</b><small>Program length</small></div>
+      </div>
+    </div>
+    <div class="m-panel">
+      <div class="m-panel-head"><i></i><i></i><i></i><span>intern-dashboard</span></div>
+      <div class="m-panel-body">
+        <div class="m-row"><i></i><span class="bar filled" style="width:72%"></span></div>
+        <div class="m-row"><i></i><span class="bar" style="width:52%"></span></div>
+        <div class="m-row"><i></i><span class="bar filled" style="width:88%"></span></div>
+        <div class="m-bars">
+          <i style="height:38%"></i><i style="height:56%"></i><i style="height:44%"></i><i style="height:74%"></i><i style="height:62%"></i><i style="height:92%"></i>
+        </div>
+        <button class="m-btn primary sm">Join on Meet</button>
+      </div>
+    </div>
+  </div>
+  <div class="m-features">
+    <div class="m-fcard"><i>1</i><b>Live classes on Meet</b><p>Mentors schedule online sessions; you join with one click from your dashboard.</p></div>
+    <div class="m-fcard"><i>2</i><b>Offer letter, automated</b><p>Generated the moment your profile is approved — no waiting, no manual PDFs.</p></div>
+    <div class="m-fcard"><i>3</i><b>Certificate you can show</b><p>Final internship certificate issued automatically when you complete the program.</p></div>
+  </div>
+</template>
+
+<template id="tpl-dash">
+  <div class="d-topbar">
+    <div class="m-logo"><i></i>InternYet</div>
+    <div class="d-tabs">
+      <span class="d-tab active">Dashboard</span><span class="d-tab">Classes</span><span class="d-tab">Profile</span><span class="d-tab">Certificates</span>
+    </div>
+    <div class="d-avatar">A</div>
+  </div>
+  <div class="d-body">
+    <div class="d-grid">
+      <div class="d-stat"><small>Active classes</small><b>6</b><u>+2 this week</u></div>
+      <div class="d-stat"><small>Hours attended</small><b>42h</b><u>84% of target</u></div>
+      <div class="d-stat"><small>Next class</small><b>Mon 11:00</b><u>React Fundamentals</u></div>
+      <div class="d-stat"><small>Certificate progress</small><b>78%</b><u>On track</u></div>
+    </div>
+    <div class="d-split">
+      <div class="d-card">
+        <div class="d-card-head"><b>Students</b><small>7 enrolled</small></div>
+        <table class="dt">
+          <thead><tr><th>Name</th><th>Program</th><th>Status</th><th>Attendance</th></tr></thead>
+          <tbody>
+            <tr><td>Aarav Mehta</td><td>Full-stack</td><td><span class="pill ok">In progress</span></td><td>86%</td></tr>
+            <tr><td>Diya Patel</td><td>Data Science</td><td><span class="pill ok">In progress</span></td><td>92%</td></tr>
+            <tr><td>Rohan Iyer</td><td>Frontend</td><td><span class="pill warn">Completed</span></td><td>100%</td></tr>
+            <tr><td>Sneha Kulkarni</td><td>Full-stack</td><td><span class="pill ok">In progress</span></td><td>74%</td></tr>
+            <tr><td>Kabir Singh</td><td>Backend</td><td><span class="pill bad">Registered</span></td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="d-side">
+        <div class="d-card d-box">
+          <h4>React Fundamentals — Week 3</h4>
+          <div class="meta">Mentor: Ananya Rao · Mon 11:00 · 60 min<br>Google Meet</div>
+          <div class="m-actions">
+            <button class="m-btn primary sm">Join on Meet</button>
+            <button class="m-btn ghost sm">View roster</button>
+          </div>
+        </div>
+        <div class="d-card d-box">
+          <h4>Sign in to InternYet</h4>
+          <div class="meta" style="margin-bottom:12px">Mentors &amp; students</div>
+          <input class="m-input" placeholder="you@college.edu">
+          <input class="m-input" type="password" placeholder="Password">
+          <button class="m-btn primary block sm">Sign in</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  function setMode(mode) {
+    root.classList.toggle('dark', mode !== 'light');
+    root.classList.toggle('pureblack', mode === 'pureblack');
+    try { localStorage.setItem('pv_mode', mode); } catch (e) {}
+    document.querySelectorAll('[data-mode]').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
+  }
+  var saved = null;
+  try { saved = localStorage.getItem('pv_mode'); } catch (e) {}
+  if (saved !== 'light' && saved !== 'dark' && saved !== 'pureblack') {
+    saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  setMode(saved);
+  document.querySelectorAll('[data-mode]').forEach(function (b) {
+    b.addEventListener('click', function () { setMode(b.dataset.mode); });
+  });
+  document.querySelectorAll('.mock-slot-landing').forEach(function (s) {
+    s.appendChild(document.getElementById('tpl-landing').content.cloneNode(true));
+  });
+  document.querySelectorAll('.mock-slot-dash').forEach(function (s) {
+    s.appendChild(document.getElementById('tpl-dash').content.cloneNode(true));
+  });
+})();
+</script>
+</body>
+</html>
