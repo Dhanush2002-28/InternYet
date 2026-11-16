@@ -14,7 +14,6 @@ const KEYS = {
   messages: "ip_demo_messages",
   notifications: "ip_demo_notifications",
   paymentQrcodes: "ip_demo_payment_qrcodes",
-  paymentCounter: "ip_demo_payment_counter",
   paymentSubmissions: "ip_demo_payment_submissions",
   paymentVerifications: "ip_demo_payment_verifications",
   paymentSettings: "ip_demo_payment_settings",
@@ -482,7 +481,6 @@ export function demoSeed() {
         "qr-2": { dataUrl: demoQrPlaceholder("Demo QR 2"), upiId: "demo2@okaxis", enabled: true, updatedAt: iso(-2) },
         "qr-3": { dataUrl: demoQrPlaceholder("Demo QR 3"), upiId: "demo3@okaxis", enabled: false, updatedAt: iso(-2) }
       });
-      write(KEYS.paymentCounter, { value: 3, updatedAt: iso(-2) });
       write(KEYS.paymentSubmissions, {
         [s3.uid]: {
           uid: s3.uid,
@@ -795,11 +793,12 @@ function demoSlotList(enabledSlots) {
   return slots.sort((a, b) => a - b);
 }
 
-function demoNextRotation() {
-  const counter = read(KEYS.paymentCounter, { value: 0 });
-  const value = (Number(counter.value) || 0) + 1;
-  write(KEYS.paymentCounter, { value, updatedAt: new Date().toISOString() });
-  return value;
+function demoSlotForStudent(uid, slots) {
+  let hash = 0;
+  for (const character of String(uid || "")) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  }
+  return slots[hash % slots.length];
 }
 
 export function demoCreatePaymentSubmission(student, enabledSlots) {
@@ -808,8 +807,7 @@ export function demoCreatePaymentSubmission(student, enabledSlots) {
   const slots = demoSlotList(enabledSlots);
   let qrSlot = 0;
   if (slots.length > 0) {
-    const value = demoNextRotation();
-    qrSlot = slots[(value - 1) % slots.length];
+    qrSlot = demoSlotForStudent(student.uid, slots);
   }
   const submission = {
     uid: student.uid,
@@ -829,8 +827,7 @@ export function demoAssignPaymentQrSlot(uid, enabledSlots) {
   if (!all[uid]) return null;
   const slots = demoSlotList(enabledSlots);
   if (slots.length === 0) return null;
-  const value = demoNextRotation();
-  all[uid] = { ...all[uid], qrSlot: slots[(value - 1) % slots.length], assignedAt: new Date().toISOString() };
+  all[uid] = { ...all[uid], qrSlot: demoSlotForStudent(uid, slots), assignedAt: new Date().toISOString() };
   write(KEYS.paymentSubmissions, all);
   return all[uid];
 }

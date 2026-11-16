@@ -14,7 +14,7 @@ An end-to-end internship registration, classes and certification portal built wi
   instantly and join with one click.
 - **Automated internship certificates** — a mentor marks a student complete and a certificate PDF
   with a unique ID is issued instantly.
-- **UPI fee collection** - students are round-robin assigned one of the admin-uploaded UPI QR
+- **UPI fee collection** - students are deterministically assigned one of the admin-uploaded UPI QR
   codes (any number; each can be enabled/disabled; a global pause switch stops everything).
   Students pay via a one-tap UPI deep link (per-slot UPI ID) or by scanning the QR, then
   submit payer name, bank, last-4-digit transaction ID and a compulsory payment screenshot
@@ -147,7 +147,7 @@ Firestore rules (`firestore.rules`) enforce:
 - Mentors/admins can write only the `internship` block on student docs (completion,
   certificate issue/revoke) - no role changes, no cross-role tampering.
 - Notifications: self-inbox or staff-only. Payment: pause switch admin-only and enforced on
-  submission writes; QR rotation counter may only advance by +1; verifications are
+  submission writes; QR assignment does not use a client-writable rotation counter; verifications are
   mentor/admin-only.
 - Only mentors/admins can list students and manage classes.
 - Only admins manage the approved-mentors list; the `adminAllowlist` list is console-managed only.

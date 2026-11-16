@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { getUsersByRole, saveProfile, nextCertificateNumber, saveCertificateRecord, revokeCertificateRecord, sendNotification } from "../../data/store";
+import { getUsersByRole, issueCertificateForStudent, reopenInternship, sendNotification } from "../../data/store";
 import { sendCertificateEmail } from "../../services/emailService";
 import EmptyState from "../../components/EmptyState";
 import { FullPageLoader } from "../../components/FullPageLoader";
@@ -68,28 +68,14 @@ export default function MentorStudents() {
     setNotice("");
     try {
       const now = new Date().toISOString();
-      const number = await nextCertificateNumber();
       const issuerName = me?.name || "Program Mentor";
-      await saveProfile(selected.uid, {
-        internship: {
-          status: "completed",
-          completedAt: now,
-          certificate: {
-            number,
-            issuedAt: now,
-            issuerName
-          }
-        }
-      });
-      await saveCertificateRecord({
-        number,
+      const certificate = await issueCertificateForStudent(selected.uid, {
         studentName: selected.name,
         program: organization.program,
-        completedAt: now,
-        issuedAt: now,
         issuerName,
-        status: "issued"
+        completedAt: now
       });
+      const number = certificate.number;
       await sendNotification(selected.uid, {
         type: "certificate",
         title: "Your internship certificate is ready",
@@ -131,10 +117,7 @@ export default function MentorStudents() {
     setNotice("");
     try {
       const oldCertNumber = selected.internship?.certificate?.number;
-      await saveProfile(selected.uid, {
-        internship: { status: "in-progress" }
-      });
-      if (oldCertNumber) await revokeCertificateRecord(oldCertNumber).catch(() => {});
+      await reopenInternship(selected.uid, oldCertNumber);
       const fresh = await getUsersByRole("student");
       setStudents(fresh);
       setNotice(`Internship re-opened for ${selected.name}.`);

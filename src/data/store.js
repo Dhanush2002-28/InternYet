@@ -9,6 +9,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   setDoc,
   updateDoc,
   where,
@@ -125,24 +126,102 @@ export async function revokeCertificateRecord(number) {
   });
 }
 
-export async function nextCertificateNumber() {
+export async function issueCertificateForStudent(studentUid, { studentName, program, issuerName, completedAt }) {
+  const issuedAt = completedAt || new Date().toISOString();
+  if (!isFirebaseConfigured) {
+    const number = await demo.demoNextCertificateNumber();
+    const certificate = {
+      number,
+      studentName,
+      program,
+      completedAt: issuedAt,
+      issuedAt,
+      issuerName,
+      status: "issued"
+    };
+    demo.demoUpdateUser(studentUid, {
+      internship: {
+        status: "completed",
+        completedAt: issuedAt,
+        certificate: { number, issuedAt, issuerName }
+      }
+    });
+    demo.demoSaveCertificate(certificate);
+    return certificate;
+  }
+
   const year = new Date().getFullYear();
   const key = `cert-${year}`;
-  if (!isFirebaseConfigured) return demo.demoNextCertificateNumber();
   const counterRef = doc(db, "counters", key);
-  const snap = await getDoc(counterRef);
-  let serial = (snap.exists() ? Number(snap.data().value || 0) : 0) + 1;
-  for (let guard = 0; guard < 100; guard++) {
-    const candidate = `CERT-${year}-${String(serial + guard).padStart(4, "0")}`;
-    const check = await getDoc(doc(db, "certificates", candidate));
-    if (!check.exists()) {
-      serial += guard;
-      break;
+  const studentRef = doc(db, "users", studentUid);
+
+  return runTransaction(db, async (transaction) => {
+    const counterSnap = await transaction.get(counterRef);
+    const studentSnap = await transaction.get(studentRef);
+    if (!studentSnap.exists() || studentSnap.data().role !== "student") {
+      throw new Error("Student profile not found.");
     }
-    if (guard === 99) serial += 100;
+
+    let serial = (counterSnap.exists() ? Number(counterSnap.data().value || 0) : 0) + 1;
+    let certificateRef = null;
+    for (let guard = 0; guard < 100; guard += 1) {
+      const candidate = `CERT-${year}-${String(serial + guard).padStart(4, "0")}`;
+      const ref = doc(db, "certificates", candidate);
+      const existing = await transaction.get(ref);
+      if (!existing.exists()) {
+        serial += guard;
+        certificateRef = ref;
+        break;
+      }
+    }
+    if (!certificateRef) throw new Error("Could not allocate a certificate number.");
+
+    const certificate = {
+      number: certificateRef.id,
+      studentName,
+      program,
+      completedAt: issuedAt,
+      issuedAt,
+      issuerName,
+      status: "issued"
+    };
+    transaction.set(counterRef, { value: serial, updatedAt: issuedAt });
+    transaction.update(studentRef, {
+      internship: {
+        status: "completed",
+        completedAt: issuedAt,
+        certificate: { number: certificate.number, issuedAt, issuerName }
+      }
+    });
+    transaction.set(certificateRef, certificate);
+    return certificate;
+  });
+}
+
+export async function reopenInternship(studentUid, certificateNumber) {
+  const norm = normalizeCertificateNumber(certificateNumber);
+  if (!isFirebaseConfigured) {
+    demo.demoUpdateUser(studentUid, { internship: { status: "in-progress" } });
+    if (norm) demo.demoRevokeCertificate(norm);
+    return;
   }
-  await setDoc(counterRef, { value: serial, updatedAt: new Date().toISOString() });
-  return `CERT-${year}-${String(serial).padStart(4, "0")}`;
+
+  const studentRef = doc(db, "users", studentUid);
+  const certificateRef = norm ? doc(db, "certificates", norm) : null;
+  await runTransaction(db, async (transaction) => {
+    const studentSnap = await transaction.get(studentRef);
+    if (!studentSnap.exists() || studentSnap.data().role !== "student") {
+      throw new Error("Student profile not found.");
+    }
+    const certificateSnap = certificateRef ? await transaction.get(certificateRef) : null;
+    transaction.update(studentRef, { internship: { status: "in-progress" } });
+    if (certificateRef && certificateSnap?.exists()) {
+      transaction.update(certificateRef, {
+        status: "revoked",
+        revokedAt: new Date().toISOString()
+      });
+    }
+  });
 }
 
 function excerpt(text, max = 90) {
@@ -487,22 +566,21 @@ function paymentSlotList(enabledSlots) {
   return slots.sort((a, b) => a - b);
 }
 
-async function nextRotationValue(counterRef) {
-  const snap = await getDoc(counterRef);
-  const value = (snap.exists() ? Number(snap.data().value || 0) : 0) + 1;
-  await setDoc(counterRef, { value, updatedAt: new Date().toISOString() });
-  return value;
+function paymentSlotForStudent(uid, slots) {
+  let hash = 0;
+  for (const character of String(uid || "")) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  }
+  return slots[hash % slots.length];
 }
 
 export async function createPaymentSubmission(student, enabledSlots) {
   if (!isFirebaseConfigured) return demo.demoCreatePaymentSubmission(student, enabledSlots);
   const slots = paymentSlotList(enabledSlots);
   const now = new Date().toISOString();
-  const counterRef = doc(db, "payment", "counters", "rotation");
   let qrSlot = 0;
   if (slots.length > 0) {
-    const value = await nextRotationValue(counterRef);
-    qrSlot = slots[(value - 1) % slots.length];
+    qrSlot = paymentSlotForStudent(student.uid, slots);
   }
   const submission = {
     uid: student.uid,
@@ -520,9 +598,7 @@ export async function assignPaymentQrSlot(uid, enabledSlots) {
   if (!isFirebaseConfigured) return demo.demoAssignPaymentQrSlot(uid, enabledSlots);
   const slots = paymentSlotList(enabledSlots);
   if (slots.length === 0) return null;
-  const counterRef = doc(db, "payment", "counters", "rotation");
-  const value = await nextRotationValue(counterRef);
-  const qrSlot = slots[(value - 1) % slots.length];
+  const qrSlot = paymentSlotForStudent(uid, slots);
   const ref = doc(db, "payment", "submissions", uid);
   await updateDoc(ref, { qrSlot, assignedAt: new Date().toISOString() });
   const snap = await getDoc(ref);

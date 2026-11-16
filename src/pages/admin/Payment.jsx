@@ -271,7 +271,7 @@ export default function AdminPayment() {
       <div className="card">
         <p className="card-title">UPI QR codes</p>
         <p className="hint">
-          Students are assigned active QRs in round-robin order. Add as many as you need — images
+          Students are assigned an active QR deterministically from the available pool. Add as many as you need — images
           are resized automatically. Disabling a QR removes it from the rotation; students already
           assigned to it can still see and pay it.
         </p>

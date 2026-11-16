@@ -15,7 +15,7 @@ End-to-end internship portal (React + Vite SPA) for an 8-week online internship 
 - **Public**: landing page, login/register, certificate verification portal (`/verify?c=CERT-YYYY-NNNN`)
 - **Collaboration**: student forum (visible in all 3 modules), 1:1 messages
   (student↔mentor, student↔admin, mentor↔admin), real-time notification bell
-- **Payments**: round-robin UPI QR assignment from an admin-managed pool (any number of
+- **Payments**: deterministic UPI QR assignment from an admin-managed pool (any number of
   QRs, per-QR UPI ID + enable/disable, global pause switch), one-tap UPI deep link,
   compulsory payment screenshot, admin cross-verification
 - **Emails (EmailJS)**: offer letter on profile completion, payment confirmation on admin
@@ -184,7 +184,7 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
 - `classes/{id}` — title, description, date, time, meetUrl, mentorUid, mentorName,
   status, createdAt
 - `payment/qrcodes/{slot}` - `{ dataUrl (base64, auto-resized <=512px), upiId, enabled, updatedAt }`
-- `payment/counters/rotation` - `{ value }` round-robin counter (rule: may only advance by +1)
+- QR assignment is deterministic per student from the active QR pool; no client-writable rotation counter is used.
 - `payment/settings` - `{ accepting: bool, updatedAt }` global pause switch (admin write)
 - `payment/submissions/{uid}` - `{ uid, name, email, qrSlot (0 = unassigned), status:
   pending|submitted, payerName, payerBank, transactionRef (last 4 digits), proofUrl
@@ -202,7 +202,7 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
   `{ participants, participantNames, participantRoles, lastMessage { text, fromUid, at },
   unread { [uid]: n }, createdAt }`; `conversations/{id}/messages/{id}` —
   `{ convId, fromUid, fromName, body, at }`
-- Demo seed key: `ip_demo_seeded_v5` (v5 adds the payment seed: 3 demo QRs with UPI IDs `demo1..3@okaxis` - qr-3 disabled - rotation counter 3, one submitted payment (Meera, QR-3, awaiting verification), settings accepting=true) — **bump to v5 if you change the seed shape**
+- Demo seed key: `ip_demo_seeded_v5` (v5 adds the payment seed: 3 demo QRs with UPI IDs `demo1..3@okaxis` - qr-3 disabled, one submitted payment (Meera, QR-3, awaiting verification), settings accepting=true) — **bump to v5 if you change the seed shape**
   (old browsers keep stale data otherwise).
 
 ### Notification events (wired)
@@ -229,7 +229,7 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
     student records - no role changes, no cross-role tampering (fixes mentor->admin
     escalation).
   - notifications: self-inbox or staff-only create (no cross-user injection).
-  - payment: settings admin-write; rotation counter may only advance by exactly +1;
+  - payment: settings admin-write; QR assignment is deterministic and does not expose a writable rotation counter;
     submissions one-shot + paused-state enforced.
   - classes readable by any signed-in user, writable by mentor/admin; conversations/
     messages participant-only; certificates public-read, mentor/admin-write.
@@ -302,7 +302,7 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
    `src/pages/student/Payment.jsx` + `src/pages/admin/Payment.jsx`): zero-infra UPI QR +
    admin manual confirmation. Admin uploads any number of QR images (no size cap; images are
    auto-resized to 512px client-side before saving); each student opening the Payment page
-   is assigned the next ACTIVE QR round-robin (`payment/counters/rotation`, persisted so a
+   is assigned an ACTIVE QR deterministically from the available pool (persisted so a
    refresh keeps the same QR). Each QR can be enabled/disabled, and a global
    `payment/settings` doc pauses all payments (also enforced in Firestore rules on
    submissions create/update). Each QR slot can carry a UPI ID powering a one-tap "Pay now"
@@ -368,6 +368,6 @@ FIXED in 6ad11da (was loose): notifications create is now self-inbox or staff-on
 Seed also includes: 7 students, 3 classes, 2 forum posts (1 with replies), a seeded
 student-mentor conversation (1 unread for the student), notifications, and the payment
 state: 3 demo QRs (QR-1/QR-2 active with UPI IDs `demo1@okaxis`/`demo2@okaxis`, QR-3
-disabled), rotation counter 3, one seeded payment (Meera, QR-3, submitted, awaiting
+disabled), one seeded payment (Meera, QR-3, submitted, awaiting
 verification), settings accepting=true. "Reset demo data" (demo banner in the module
 topbar) reseeds.

@@ -12,7 +12,7 @@ export const emailConfig = {
 
 export function isEmailConfigured() {
   return Boolean(
-    emailConfig.publicKey.startsWith("eyJ") &&
+    emailConfig.publicKey.length > 0 &&
     emailConfig.serviceId.length > 0 &&
     Object.values(emailConfig.templates).every((id) => id.length > 0)
   );

@@ -117,12 +117,20 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.participants.size() == 2
         && request.resource.data.participants.hasAny(myUid());
-      allow update: if isSignedIn() && myUid() in resource.data.participants;
+      allow update: if isSignedIn()
+        && myUid() in resource.data.participants
+        && request.resource.data.participants == resource.data.participants
+        && request.resource.data.participantNames == resource.data.participantNames
+        && request.resource.data.participantRoles == resource.data.participantRoles;
       allow delete: if false;
 
       match /messages/{msgId} {
-        allow read, create: if isSignedIn()
+        allow read: if isSignedIn()
           && myUid() in get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+        allow create: if isSignedIn()
+          && myUid() in get(/databases/$(database)/documents/conversations/$(convId)).data.participants
+          && request.resource.data.convId == convId
+          && request.resource.data.fromUid == myUid();
         allow update, delete: if false;
       }
     }
@@ -135,9 +143,7 @@ service cloud.firestore {
 
       match /counters/{key} {
         allow read: if isSignedIn();
-        // Rotation counter may only advance by exactly 1 (per assignment).
-        allow write: if isSignedIn()
-          && (resource == null || request.resource.data.value == resource.data.value + 1);
+        allow write: if false;
       }
 
       match /settings {
