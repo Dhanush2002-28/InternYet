@@ -216,6 +216,23 @@ textarea {
   width: 100%;
 }
 
+.forgot-password-link {
+  display: block;
+  margin: -4px 0 12px auto;
+  border: 0;
+  background: none;
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.forgot-password-link:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* ---------- badges ---------- */
 .badge {
   display: inline-block;

@@ -3,6 +3,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   EmailAuthProvider,
   linkWithCredential,
   updateProfile as firebaseUpdateProfile,
@@ -124,6 +125,18 @@ export async function setPasswordForCurrentUser(password) {
   const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
   await linkWithCredential(auth.currentUser, credential);
   await auth.currentUser.reload();
+}
+
+export async function sendResetPasswordEmail(email) {
+  if (isDemoMode) {
+    await demo.demoSeed();
+    const exists = demo.demoGetAllUsers().some(
+      (user) => String(user.email).toLowerCase() === String(email).toLowerCase()
+    );
+    if (!exists) throw { code: "auth/user-not-found" };
+    return;
+  }
+  await sendPasswordResetEmail(auth, email);
 }
 
 export async function signOutUser() {

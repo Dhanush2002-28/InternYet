@@ -2,8 +2,8 @@ import InstallAppPrompt from "../components/InstallAppPrompt";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { canUseGoogle, isDemoMode, signInWithEmail, signInWithGoogle } from "../data/auth";
-import { friendlyAuthError } from "../utils/validators";
+import { canUseGoogle, isDemoMode, sendResetPasswordEmail, signInWithEmail, signInWithGoogle } from "../data/auth";
+import { friendlyAuthError, isValidEmail } from "../utils/validators";
 import { roleHome } from "../components/ProtectedRoute";
 
 const DEMO_ACCOUNTS = [
@@ -40,6 +40,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
   if (!loading && user && user.needsPasswordSetup) {
@@ -50,6 +51,7 @@ export default function Login() {
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
+    setNotice("");
     setBusy(true);
     try {
       await signInWithEmail(email.trim(), password);
@@ -61,11 +63,35 @@ export default function Login() {
 
   async function handleGoogle() {
     setError("");
+    setNotice("");
     setBusy(true);
     try {
       await signInWithGoogle();
     } catch (err) {
       setError(friendlyAuthError(err));
+      setBusy(false);
+    }
+  }
+
+  async function handleResetPassword() {
+    setError("");
+    setNotice("");
+    const normalizedEmail = email.trim();
+    if (!isValidEmail(normalizedEmail)) {
+      setError("Enter your email address, then choose Forgot password?");
+      return;
+    }
+    setBusy(true);
+    try {
+      await sendResetPasswordEmail(normalizedEmail);
+      setNotice(
+        isDemoMode
+          ? "Demo mode cannot send email. Use the demo password shown above."
+          : "Password reset email sent. Check your inbox and spam folder."
+      );
+    } catch (err) {
+      setError(friendlyAuthError(err));
+    } finally {
       setBusy(false);
     }
   }
@@ -105,6 +131,7 @@ export default function Login() {
         )}
 
         {error && <div className="notice notice-error">{error}</div>}
+        {notice && <div className="notice notice-success">{notice}</div>}
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="field">
@@ -131,6 +158,14 @@ export default function Login() {
               required
             />
           </div>
+          <button
+            type="button"
+            className="forgot-password-link"
+            onClick={handleResetPassword}
+            disabled={busy}
+          >
+            Forgot password?
+          </button>
           <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
