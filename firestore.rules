@@ -44,6 +44,10 @@ service cloud.firestore {
         && uid == request.auth.uid
         && (
           request.resource.data.role == 'student'
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'role', 'name', 'email', 'phone', 'photoURL', 'createdAt', 'offerLetter', 'internship'])
+          && request.resource.data.offerLetter == null
+          && request.resource.data.internship.status == 'registered'
           || (request.resource.data.role == 'mentor'
               && exists(/databases/$(database)/documents/approvedMentors/$(request.auth.token.email)))
           || (request.resource.data.role == 'admin'

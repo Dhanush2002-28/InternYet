@@ -83,17 +83,18 @@ async function ensureProfile(firebaseUser, extra = {}) {
   } else {
     const data = snap.data();
     const patch = {};
-    if (!data.name && (firebaseUser.displayName || extra.name)) {
-      patch.name = firebaseUser.displayName || extra.name;
+    if (data.role === "student") {
+      if (!data.name && (firebaseUser.displayName || extra.name)) {
+        patch.name = firebaseUser.displayName || extra.name;
+      }
+      if (!data.photoURL && firebaseUser.photoURL) patch.photoURL = firebaseUser.photoURL;
+      if (Object.keys(patch).length > 0) await updateDoc(ref, patch);
     }
-    if (!data.photoURL && firebaseUser.photoURL) patch.photoURL = firebaseUser.photoURL;
-    if (Object.keys(patch).length > 0) await updateDoc(ref, patch);
   }
 }
 
 export async function signInWithGoogle() {
   const credential = await signInWithPopup(auth, googleProvider);
-  await ensureProfile(credential.user);
   return publicUser(credential.user);
 }
 
@@ -104,7 +105,6 @@ export async function signInWithEmail(email, password) {
     return user;
   }
   const credential = await signInWithEmailAndPassword(auth, email, password);
-  await ensureProfile(credential.user);
   return publicUser(credential.user);
 }
 
@@ -116,7 +116,6 @@ export async function signUpWithEmail({ name, email, password }) {
   }
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   await firebaseUpdateProfile(credential.user, { displayName: name });
-  await ensureProfile(credential.user, { name });
   return publicUser(credential.user);
 }
 
