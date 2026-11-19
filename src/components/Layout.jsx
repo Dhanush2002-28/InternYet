@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { demoReset } from "../data/demo";
 import { organization } from "../config/organization";
@@ -49,12 +50,17 @@ export default function Layout() {
   const { user, profile, signOut, isDemoMode } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
   const role = profile?.role;
   const paymentVerified = usePaymentVerified();
   let links = NAV[role] || NAV.student;
   if (role === "student" && paymentVerified !== true) {
     links = links.filter((link) => STUDENT_LINKS_BEFORE_PAYMENT.includes(link.to));
   }
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   async function handleSignOut() {
     await signOut();
@@ -84,7 +90,7 @@ export default function Layout() {
             <span className="brand-mark">IP</span>
             <span className="brand-name">{organization.shortName}</span>
           </div>
-          <nav className="topnav">
+          <nav className="topnav" aria-label="Primary navigation">
             {links.map((link) => (
               <NavLink
                 key={link.to}
@@ -96,6 +102,17 @@ export default function Layout() {
               </NavLink>
             ))}
           </nav>
+          <button
+            type="button"
+            className={`menu-toggle${menuOpen ? " open" : ""}`}
+            aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
           <div className="topbar-user">
             <span className="avatar">{initials(profile?.name || user?.name)}</span>
             <div className="topbar-user-meta">
@@ -114,6 +131,39 @@ export default function Layout() {
             </button>
           </div>
         </div>
+        {menuOpen && (
+          <>
+            <button
+              type="button"
+              className="mobile-nav-backdrop"
+              aria-label="Close navigation menu"
+              onClick={() => setMenuOpen(false)}
+            />
+            <nav className="mobile-nav" aria-label="Mobile navigation">
+              <div className="mobile-nav-user">
+                <span className="avatar">{initials(profile?.name || user?.name)}</span>
+                <div>
+                  <strong>{profile?.name || user?.name}</strong>
+                  <span className="role-badge">{roleLabel(role)}</span>
+                </div>
+              </div>
+              {links.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.end}
+                  onClick={() => setMenuOpen(false)}
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                >
+                  {link.label}
+                </NavLink>
+              ))}
+              <button type="button" className="mobile-nav-signout" onClick={handleSignOut}>
+                Sign out
+              </button>
+            </nav>
+          </>
+        )}
       </header>
       <main key={location.pathname} className="page-content">
         <Outlet />

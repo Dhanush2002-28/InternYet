@@ -42,6 +42,9 @@ export default function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  if (!loading && user && user.needsPasswordSetup) {
+    return <Navigate to="/setup-password" replace />;
+  }
   if (!loading && user && profile) return <Navigate to={roleHome(profile.role)} replace />;
 
   async function handleSubmit(event) {

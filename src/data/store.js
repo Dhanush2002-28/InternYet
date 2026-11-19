@@ -19,6 +19,18 @@ import { db, isFirebaseConfigured } from "../firebase/app";
 import * as demo from "./demo";
 import { newId } from "../utils/format";
 
+function paymentCollection(name) {
+  return collection(db, `payment_${name}`);
+}
+
+function paymentSubdocument(collectionName, id) {
+  return doc(paymentCollection(collectionName), id);
+}
+
+function paymentSettingsDocument() {
+  return doc(paymentCollection("settings"), "settings");
+}
+
 export async function getProfile(uid) {
   if (!isFirebaseConfigured) return demo.demoGetUser(uid);
   const snap = await getDoc(doc(db, "users", uid));
@@ -527,7 +539,7 @@ export async function notifyStudentsOfClass(cls, action = "created") {
 
 export async function getPaymentQrcodes() {
   if (!isFirebaseConfigured) return demo.demoGetPaymentQrcodes();
-  const snap = await getDocs(collection(db, "payment", "qrcodes"));
+  const snap = await getDocs(paymentCollection("qrcodes"));
   const codes = {};
   snap.docs.forEach((d) => {
     codes[d.id] = d.data();
@@ -537,7 +549,7 @@ export async function getPaymentQrcodes() {
 
 export async function savePaymentQrcode(slot, dataUrl) {
   if (!isFirebaseConfigured) return demo.demoSavePaymentQrcode(slot, dataUrl);
-  await setDoc(doc(db, "payment", "qrcodes", slot), {
+  await setDoc(paymentSubdocument("qrcodes", slot), {
     dataUrl,
     enabled: true,
     updatedAt: new Date().toISOString()
@@ -546,16 +558,16 @@ export async function savePaymentQrcode(slot, dataUrl) {
 
 export async function setPaymentQrcodeEnabled(slot, enabled) {
   if (!isFirebaseConfigured) return demo.demoSetPaymentQrcodeEnabled(slot, enabled);
-  await updateDoc(doc(db, "payment", "qrcodes", slot), { enabled: Boolean(enabled) });
+  await updateDoc(paymentSubdocument("qrcodes", slot), { enabled: Boolean(enabled) });
 }
 export async function savePaymentQrcodeUpi(slot, upiId) {
   if (!isFirebaseConfigured) return demo.demoSavePaymentQrcodeUpi(slot, upiId);
-  await updateDoc(doc(db, "payment", "qrcodes", slot), { upiId: String(upiId || "").trim() });
+  await updateDoc(paymentSubdocument("qrcodes", slot), { upiId: String(upiId || "").trim() });
 }
 
 export async function getPaymentSubmission(uid) {
   if (!isFirebaseConfigured) return demo.demoGetPaymentSubmission(uid);
-  const snap = await getDoc(doc(db, "payment", "submissions", uid));
+  const snap = await getDoc(paymentSubdocument("submissions", uid));
   return snap.exists() ? snap.data() : null;
 }
 
@@ -590,7 +602,7 @@ export async function createPaymentSubmission(student, enabledSlots) {
     status: "pending",
     assignedAt: now
   };
-  await setDoc(doc(db, "payment", "submissions", student.uid), submission);
+  await setDoc(paymentSubdocument("submissions", student.uid), submission);
   return submission;
 }
 
@@ -599,7 +611,7 @@ export async function assignPaymentQrSlot(uid, enabledSlots) {
   const slots = paymentSlotList(enabledSlots);
   if (slots.length === 0) return null;
   const qrSlot = paymentSlotForStudent(uid, slots);
-  const ref = doc(db, "payment", "submissions", uid);
+  const ref = paymentSubdocument("submissions", uid);
   await updateDoc(ref, { qrSlot, assignedAt: new Date().toISOString() });
   const snap = await getDoc(ref);
   return snap.exists() ? snap.data() : null;
@@ -609,7 +621,7 @@ export async function submitPaymentDetails(uid, { payerName, payerBank, transact
   if (!isFirebaseConfigured) {
     return demo.demoSubmitPaymentDetails(uid, { payerName, payerBank, transactionRef, proofUrl });
   }
-  await updateDoc(doc(db, "payment", "submissions", uid), {
+  await updateDoc(paymentSubdocument("submissions", uid), {
     payerName: String(payerName || "").trim(),
     payerBank: String(payerBank || "").trim(),
     transactionRef: String(transactionRef || "").trim(),
@@ -627,19 +639,19 @@ function sortSubmissions(items) {
 
 export async function listPaymentSubmissions() {
   if (!isFirebaseConfigured) return demo.demoListPaymentSubmissions();
-  const snap = await getDocs(collection(db, "payment", "submissions"));
+  const snap = await getDocs(paymentCollection("submissions"));
   return sortSubmissions(snap.docs.map((d) => d.data()));
 }
 
 export async function getPaymentVerification(uid) {
   if (!isFirebaseConfigured) return demo.demoGetPaymentVerification(uid);
-  const snap = await getDoc(doc(db, "payment", "verifications", uid));
+  const snap = await getDoc(paymentSubdocument("verifications", uid));
   return snap.exists() ? snap.data() : null;
 }
 
 export async function verifyPayment(uid, verifiedBy) {
   if (!isFirebaseConfigured) return demo.demoVerifyPayment(uid, verifiedBy);
-  await setDoc(doc(db, "payment", "verifications", uid), {
+  await setDoc(paymentSubdocument("verifications", uid), {
     verified: true,
     verifiedAt: new Date().toISOString(),
     verifiedBy: verifiedBy || "Admin"
@@ -650,7 +662,7 @@ export function subscribePaymentSubmissions(callback) {
   if (!isFirebaseConfigured) {
     return demo.demoSubscribe(() => demo.demoListPaymentSubmissions(), callback);
   }
-  return onSnapshot(collection(db, "payment", "submissions"), (snap) =>
+  return onSnapshot(paymentCollection("submissions"), (snap) =>
     callback(sortSubmissions(snap.docs.map((d) => d.data())))
   );
 }
@@ -659,19 +671,19 @@ export function subscribePaymentVerification(uid, callback) {
   if (!isFirebaseConfigured) {
     return demo.demoSubscribe(() => demo.demoGetPaymentVerification(uid), callback);
   }
-  return onSnapshot(doc(db, "payment", "verifications", uid), (snap) =>
+  return onSnapshot(paymentSubdocument("verifications", uid), (snap) =>
     callback(snap.exists() ? snap.data() : null)
   );
 }
 export async function getPaymentSettings() {
   if (!isFirebaseConfigured) return demo.demoGetPaymentSettings();
-  const snap = await getDoc(doc(db, "payment", "settings"));
+  const snap = await getDoc(paymentSettingsDocument());
   return snap.exists() ? snap.data() : { accepting: true };
 }
 
 export async function setPaymentAccepting(accepting) {
   if (!isFirebaseConfigured) return demo.demoSetPaymentAccepting(accepting);
-  await setDoc(doc(db, "payment", "settings"), {
+  await setDoc(paymentSettingsDocument(), {
     accepting: Boolean(accepting),
     updatedAt: new Date().toISOString()
   });
@@ -681,7 +693,7 @@ export function subscribePaymentSettings(callback) {
   if (!isFirebaseConfigured) {
     return demo.demoSubscribe(() => demo.demoGetPaymentSettings(), callback);
   }
-  return onSnapshot(doc(db, "payment", "settings"), (snap) =>
+  return onSnapshot(paymentSettingsDocument(), (snap) =>
     callback(snap.exists() ? snap.data() : { accepting: true })
   );
 }

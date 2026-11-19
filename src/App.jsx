@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Verify from "./pages/Verify";
 import CompleteProfile from "./pages/CompleteProfile";
+import PasswordSetup from "./pages/PasswordSetup";
 import NotFound from "./pages/NotFound";
 import Forbidden from "./pages/Forbidden";
 import StudentDashboard from "./pages/student/Dashboard";
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify" element={<Verify />} />
+          <Route path="/setup-password" element={<PasswordSetup />} />
           <Route
             path="/complete-profile"
             element={

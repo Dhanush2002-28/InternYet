@@ -8,6 +8,7 @@ service cloud.firestore {
 
     function myRole() {
       return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'none')
         : 'none';
     }
@@ -21,7 +22,8 @@ service cloud.firestore {
     }
 
     function paymentAccepting() {
-      return get(/databases/$(database)/documents/payment/settings).data.get('accepting', true) != false;
+      return !exists(/databases/$(database)/documents/payment_settings/settings)
+        || get(/databases/$(database)/documents/payment_settings/settings).data.get('accepting', true) != false;
     }
 
     match /users/{uid} {
@@ -47,7 +49,13 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'uid', 'createdAt']) == false
           && (
             request.resource.data.diff(resource.data).affectedKeys().hasAny(['internship']) == false
-            || (resource.data.internship == null && request.resource.data.internship.status == 'in-progress')
+            || (
+              request.resource.data.internship.status == 'in-progress'
+              && (
+                resource.data.internship == null
+                || resource.data.internship.status == 'registered'
+              )
+            )
           )
           && (
             request.resource.data.diff(resource.data).affectedKeys().hasAny(['offerLetter']) == false
@@ -85,7 +93,8 @@ service cloud.firestore {
     }
 
     match /adminAllowlist/{email} {
-      allow read: if isSignedIn() && myRole() == 'admin';
+      allow get: if isSignedIn() && (email == request.auth.token.email || myRole() == 'admin');
+      allow list: if isSignedIn() && myRole() == 'admin';
       allow write: if false;
     }
 
@@ -135,40 +144,38 @@ service cloud.firestore {
       }
     }
 
-    match /payment {
-      match /qrcodes/{slot} {
-        allow read: if isSignedIn();
-        allow write: if isSignedIn() && myRole() == 'admin';
-      }
+    match /payment_qrcodes/{slot} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && myRole() == 'admin';
+    }
 
-      match /counters/{key} {
-        allow read: if isSignedIn();
-        allow write: if false;
-      }
+    match /payment_counters/{key} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
 
-      match /settings {
-        allow read: if isSignedIn();
-        allow write: if isSignedIn() && myRole() == 'admin';
-      }
+    match /payment_settings/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && myRole() == 'admin';
+    }
 
-      match /submissions/{uid} {
-        allow read: if isSignedIn() && (uid == request.auth.uid || isMentorOrAdmin());
-        allow create: if isSignedIn()
-          && uid == request.auth.uid
-          && request.resource.data.uid == request.auth.uid
-          && paymentAccepting();
-        allow update: if isSignedIn()
-          && uid == request.auth.uid
-          && !resource.data.submittedAt
-          && paymentAccepting();
-        allow delete: if false;
-      }
+    match /payment_submissions/{uid} {
+      allow read: if isSignedIn() && (uid == request.auth.uid || isMentorOrAdmin());
+      allow create: if isSignedIn()
+        && uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && paymentAccepting();
+      allow update: if isSignedIn()
+        && uid == request.auth.uid
+        && !resource.data.keys().hasAny(['submittedAt'])
+        && paymentAccepting();
+      allow delete: if false;
+    }
 
-      match /verifications/{uid} {
-        allow read: if isSignedIn() && (uid == request.auth.uid || isMentorOrAdmin());
-        allow write: if isSignedIn() && isMentorOrAdmin();
-        allow delete: if false;
-      }
+    match /payment_verifications/{uid} {
+      allow read: if isSignedIn() && (uid == request.auth.uid || isMentorOrAdmin());
+      allow write: if isSignedIn() && isMentorOrAdmin();
+      allow delete: if false;
     }
   }
 }

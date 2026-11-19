@@ -183,13 +183,13 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
   ref { kind, convId|classId|postId }, fromUid, read, at }`
 - `classes/{id}` — title, description, date, time, meetUrl, mentorUid, mentorName,
   status, createdAt
-- `payment/qrcodes/{slot}` - `{ dataUrl (base64, auto-resized <=512px), upiId, enabled, updatedAt }`
+- `payment_qrcodes/{slot}` - `{ dataUrl (base64, auto-resized <=512px), upiId, enabled, updatedAt }`
 - QR assignment is deterministic per student from the active QR pool; no client-writable rotation counter is used.
-- `payment/settings` - `{ accepting: bool, updatedAt }` global pause switch (admin write)
-- `payment/submissions/{uid}` - `{ uid, name, email, qrSlot (0 = unassigned), status:
+- `payment_settings/settings` - `{ accepting: bool, updatedAt }` global pause switch (admin write)
+- `payment_submissions/{uid}` - `{ uid, name, email, qrSlot (0 = unassigned), status:
   pending|submitted, payerName, payerBank, transactionRef (last 4 digits), proofUrl
   (base64 screenshot), assignedAt, submittedAt }` - one-shot after submit
-- `payment/verifications/{uid}` - `{ verified, verifiedAt, verifiedBy }` (mentor/admin write only)
+- `payment_verifications/{uid}` - `{ verified, verifiedAt, verifiedBy }` (mentor/admin write only)
 - `approvedMentors/{email}` — mentor allowlist (admin-managed)
 - `adminAllowlist/{email}` — admin allowlist (**client write: false** — console/SDK only)
 - `certificates/{number}` — **public read** (verification portal); contains only what is
@@ -304,7 +304,7 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
    auto-resized to 512px client-side before saving); each student opening the Payment page
    is assigned an ACTIVE QR deterministically from the available pool (persisted so a
    refresh keeps the same QR). Each QR can be enabled/disabled, and a global
-   `payment/settings` doc pauses all payments (also enforced in Firestore rules on
+   `payment_settings/settings` doc pauses all payments (also enforced in Firestore rules on
    submissions create/update). Each QR slot can carry a UPI ID powering a one-tap "Pay now"
    upi:// deep link on the student page (alongside "Show QR"); a payment screenshot upload
    is compulsory (client-compressed to fit the 1 MB Firestore doc limit) and the admin can

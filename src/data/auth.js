@@ -3,6 +3,8 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
+  linkWithCredential,
   updateProfile as firebaseUpdateProfile,
   signOut
 } from "firebase/auth";
@@ -14,11 +16,15 @@ export const isDemoMode = !isFirebaseConfigured;
 export const canUseGoogle = isFirebaseConfigured;
 
 function publicUser(firebaseUser) {
+  const hasPasswordProvider = firebaseUser.providerData.some(
+    (provider) => provider.providerId === "password"
+  );
   return {
     uid: firebaseUser.uid,
     name: firebaseUser.displayName || "",
     email: firebaseUser.email || "",
-    photoURL: firebaseUser.photoURL || null
+    photoURL: firebaseUser.photoURL || null,
+    needsPasswordSetup: !isDemoMode && !hasPasswordProvider
   };
 }
 
@@ -29,9 +35,17 @@ export async function onAuthChange(callback) {
     callback(demo.demoCurrentUser());
     return () => demo.demoOnSession(null);
   }
-  return onAuthStateChanged(auth, (user) => {
-    if (user) callback(publicUser(user));
-    else callback(null);
+  return onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      callback(null);
+      return;
+    }
+    try {
+      await ensureProfile(user);
+    } catch (err) {
+      console.error("Failed to ensure profile:", err);
+    }
+    callback(publicUser(user));
   });
 }
 
@@ -104,6 +118,13 @@ export async function signUpWithEmail({ name, email, password }) {
   await firebaseUpdateProfile(credential.user, { displayName: name });
   await ensureProfile(credential.user, { name });
   return publicUser(credential.user);
+}
+
+export async function setPasswordForCurrentUser(password) {
+  if (isDemoMode || !auth?.currentUser?.email) return;
+  const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+  await linkWithCredential(auth.currentUser, credential);
+  await auth.currentUser.reload();
 }
 
 export async function signOutUser() {

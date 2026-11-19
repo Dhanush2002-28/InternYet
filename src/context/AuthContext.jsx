@@ -20,10 +20,14 @@ export function AuthProvider({ children }) {
         return;
       }
       let nextProfile = null;
-      try {
-        nextProfile = await getProfile(nextUser.uid);
-      } catch (err) {
-        console.error("Failed to load profile:", err);
+      for (let attempt = 0; attempt < 3 && !nextProfile; attempt += 1) {
+        if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 150));
+        try {
+          nextProfile = await getProfile(nextUser.uid);
+        } catch (err) {
+          console.error("Failed to load profile:", err);
+          break;
+        }
       }
       if (cancelled) return;
       setUser(nextUser);

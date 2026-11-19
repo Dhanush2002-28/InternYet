@@ -14,6 +14,7 @@ export default function ProtectedRoute({ roles, children }) {
 
   if (loading) return <FullPageLoader label="Checking your session…" />;
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  if (user.needsPasswordSetup) return <Navigate to="/setup-password" replace />;
   if (!profile) return <FullPageLoader label="Loading your profile…" />;
   if (roles && !roles.includes(profile.role)) return <Navigate to="/forbidden" replace />;
   return children ? <>{children}</> : <Outlet />;

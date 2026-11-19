@@ -781,7 +781,9 @@ select.input {
   display: flex;
   gap: 4px;
   flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .topnav a {
@@ -790,7 +792,14 @@ select.input {
   color: var(--muted);
   font-weight: 600;
   font-size: 13.5px;
+  flex-shrink: 0;
   transition: color 0.15s ease, background 0.15s ease;
+}
+
+.menu-toggle,
+.mobile-nav,
+.mobile-nav-backdrop {
+  display: none;
 }
 
 .topnav a:hover {
@@ -823,6 +832,7 @@ select.input {
 .page-content {
   flex: 1;
   width: 80%;
+  min-width: 0;
   margin: 0 auto;
   padding: 30px 0 56px;
 }
@@ -848,6 +858,15 @@ select.input {
   justify-content: space-between;
   gap: 12px;
   padding: 15px 0;
+}
+
+.card,
+.stat-card,
+.page-head > *,
+.grid > *,
+.directory-layout > *,
+.pay-layout > * {
+  min-width: 0;
 }
 
 /* ---------- detail list ---------- */
@@ -3206,5 +3225,192 @@ select.input {
 @media (max-width: 760px) {
   .pay-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- responsive app navigation ---------- */
+@media (max-width: 1100px) {
+  .topbar-inner {
+    width: 92%;
+    gap: 14px;
+    flex-wrap: nowrap;
+  }
+
+  .topnav {
+    display: none;
+  }
+
+  .menu-toggle {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .menu-toggle span {
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 0.18s ease, opacity 0.18s ease;
+  }
+
+  .menu-toggle.open span:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+  }
+
+  .menu-toggle.open span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .menu-toggle.open span:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+  }
+
+  .topbar-user {
+    margin-left: auto;
+  }
+
+  .mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 18;
+    width: 100%;
+    border: 0;
+    background: rgba(15, 23, 42, 0.28);
+    cursor: default;
+  }
+
+  .mobile-nav {
+    display: flex;
+    position: absolute;
+    top: 100%;
+    left: 4%;
+    right: 4%;
+    z-index: 21;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 0 0 14px 14px;
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .mobile-nav-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 6px 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .mobile-nav-user > div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .mobile-nav-user strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-nav-user .role-badge {
+    align-self: flex-start;
+  }
+
+  .mobile-nav a,
+  .mobile-nav-signout {
+    display: block;
+    width: 100%;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .mobile-nav a:hover,
+  .mobile-nav a.active {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+  }
+
+  .mobile-nav-signout {
+    margin-top: 6px;
+    border-top: 1px solid var(--line-soft);
+    border-radius: 0;
+    padding-top: 14px;
+    color: var(--red);
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar-inner {
+    width: 94%;
+    padding: 9px 0;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .brand-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .page-content {
+    width: 94%;
+    padding-top: 22px;
+  }
+
+  .page-head {
+    gap: 12px;
+  }
+
+  .page-head .btn {
+    width: 100%;
+  }
+
+  .card,
+  .stat-card {
+    padding: 16px;
+  }
+
+  .detail-list > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .detail-list dd {
+    text-align: left;
+  }
+
+  .row-actions {
+    width: 100%;
+  }
+
+  .row-actions .btn {
+    flex: 1 1 auto;
   }
 }
