@@ -17,6 +17,17 @@ service cloud.firestore {
       return myRole() == 'mentor' || myRole() == 'admin';
     }
 
+    function isPaymentVerifiedStudent() {
+      return isSignedIn()
+        && myRole() == 'student'
+        && exists(/databases/$(database)/documents/payment_verifications/$(request.auth.uid))
+        && get(/databases/$(database)/documents/payment_verifications/$(request.auth.uid)).data.get('verified', false) == true;
+    }
+
+    function canAccessPaidContent() {
+      return isMentorOrAdmin() || isPaymentVerifiedStudent();
+    }
+
     function myUid() {
       return request.auth.uid;
     }
@@ -81,7 +92,7 @@ service cloud.firestore {
     }
 
     match /classes/{id} {
-      allow get, list: if isSignedIn();
+      allow get, list: if canAccessPaidContent();
       allow create, update, delete: if isSignedIn() && isMentorOrAdmin();
     }
 
@@ -108,14 +119,15 @@ service cloud.firestore {
     }
 
     match /posts/{postId} {
-      allow read: if isSignedIn();
+      allow read: if canAccessPaidContent();
       allow create: if isSignedIn()
+        && canAccessPaidContent()
         && request.resource.data.authorUid == myUid();
       allow update, delete: if false;
 
       match /replies/{replyId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn()
+        allow read: if canAccessPaidContent();
+        allow create: if canAccessPaidContent()
           && request.resource.data.authorUid == myUid();
         allow update, delete: if false;
       }

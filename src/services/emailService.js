@@ -1,23 +1,36 @@
-import { send } from "@emailjs/browser";
-import { emailConfig, isEmailConfigured } from "../config/email";
 import { organization } from "../config/organization";
 import { formatDate } from "../utils/format";
+import { auth } from "../firebase/app";
 
 function feeText() {
   return `₹${Number(organization.fee || 0).toLocaleString("en-IN")}`;
 }
 
 async function dispatch(templateKey, params) {
-  if (!isEmailConfigured()) {
-    console.info(`[email] EmailJS not configured - skipped "${templateKey}" for ${params.email || "unknown recipient"}`);
+  if (!auth?.currentUser) {
+    console.info(`[email] No authenticated user - skipped "${templateKey}"`);
     return { skipped: true };
   }
-  return send(
-    emailConfig.serviceId,
-    emailConfig.templates[templateKey],
-    params,
-    { publicKey: emailConfig.publicKey }
-  );
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const response = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${idToken}`
+      },
+      body: JSON.stringify({ templateKey, params })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Email delivery failed.");
+    return data;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      console.info(`[email] Email API unavailable locally - skipped "${templateKey}"`);
+      return { skipped: true };
+    }
+    throw error;
+  }
 }
 
 // Sent when a student completes their profile and the offer letter is generated.
@@ -25,15 +38,15 @@ export function sendOfferLetterEmail(profile) {
   const offer = profile.offerLetter || {};
   return dispatch("offerLetter", {
     email: profile.email || "",
-    student_name: profile.name || "",
-    offer_number: offer.number || "",
+    studentName: profile.name || "",
+    offerNumber: offer.number || "",
     organization: organization.name,
     program: organization.program,
     duration: organization.duration,
     stipend: organization.stipend,
-    contact_email: organization.email,
-    contact_phone: organization.phone,
-    issued_at: formatDate(offer.issuedAt)
+    contactEmail: organization.email,
+    contactPhone: organization.phone,
+    issuedAt: formatDate(offer.issuedAt)
   });
 }
 
@@ -41,14 +54,14 @@ export function sendOfferLetterEmail(profile) {
 export function sendPaymentConfirmationEmail(student, submission, verification) {
   return dispatch("paymentConfirmed", {
     email: student.email || submission.email || "",
-    student_name: student.name || submission.name || "",
+    studentName: student.name || submission.name || "",
     fee: feeText(),
-    qr_slot: submission.qrSlot,
-    payer_name: submission.payerName || "",
-    payer_bank: submission.payerBank || "",
-    transaction_ref: submission.transactionRef || "",
-    verified_by: verification?.verifiedBy || "Admin",
-    verified_at: formatDate(verification?.verifiedAt)
+    qrSlot: submission.qrSlot,
+    payerName: submission.payerName || "",
+    payerBank: submission.payerBank || "",
+    transactionRef: submission.transactionRef || "",
+    verifiedBy: verification?.verifiedBy || "Admin",
+    verifiedAt: formatDate(verification?.verifiedAt)
   });
 }
 
@@ -56,14 +69,14 @@ export function sendPaymentConfirmationEmail(student, submission, verification) 
 export function sendCertificateEmail(student, certificate, completedAt) {
   return dispatch("certificate", {
     email: student.email || "",
-    student_name: student.name || "",
-    certificate_number: certificate.number || "",
+    studentName: student.name || "",
+    certificateNumber: certificate.number || "",
     organization: organization.name,
     program: organization.program,
     duration: organization.duration,
-    completed_at: formatDate(completedAt || certificate.issuedAt),
-    issued_by: certificate.issuerName || "",
-    portal_url: `${window.location.origin}/student/certificate`,
-    verify_url: `${window.location.origin}/verify?c=${encodeURIComponent(certificate.number || "")}`
+    completedAt: formatDate(completedAt || certificate.issuedAt),
+    issuedBy: certificate.issuerName || "",
+    portalUrl: `${window.location.origin}/student/certificate`,
+    verifyUrl: `${window.location.origin}/verify?c=${encodeURIComponent(certificate.number || "")}`
   });
 }

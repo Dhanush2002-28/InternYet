@@ -28,10 +28,9 @@ An end-to-end internship registration, classes and certification portal built wi
   and mentor and admin, with unread counts.
 - **Real-time notifications** - an in-app bell for new messages, forum replies on your
   discussions, class scheduling/updates and certificate issuance.
-- **Email notifications (EmailJS)** - the offer letter is emailed when a student completes
+- **Email notifications (Resend)** - the offer letter is emailed when a student completes
   their profile, a confirmation is emailed when the admin verifies a payment, and the
-  certificate is emailed on completion. Templates live in `email-templates/` (paste them
-  into the EmailJS dashboard; set the keys in `.env`).
+  certificate is emailed on completion. Delivery is handled by a server-side Vercel API.
 - **Mentor module** — full student directory, class scheduling/management, certificate issuance.
 - **Admin module** — program overview, mentor approval, all-user list.
 - **Secure by design** — role-based protected routes, fallback 404/403 pages, Firestore security
@@ -108,28 +107,23 @@ stipend and signatory. These values appear in the UI, offer letters and certific
 
 8. `npm run dev` — the demo banner disappears and the app talks to Firebase.
 
-## EmailJS setup (optional - emails)
+## Resend setup (optional - emails)
 
-The portal sends three transactional emails via [EmailJS](https://www.emailjs.com) (no backend
-needed): the offer letter (on profile completion), payment confirmation (on admin
-verification) and the certificate (on completion).
+The portal sends offer letters, payment confirmations and certificates through the server-side
+`/api/send-email` endpoint.
 
-1. Create a free account and an email service (Gmail/Outlook/custom SMTP) in the EmailJS
-   dashboard; note your **Service ID** and **Public Key**.
-2. Create the three email templates from the paste-ready files in `email-templates/`
-   (offer-letter, payment-confirmation, certificate).
-3. Add to `.env`:
+1. Create a Resend account and verify a sending domain.
+2. Create a Resend API key.
+3. Add these server-only variables to `.env` locally or Vercel:
 
-   ```
-   VITE_EMAILJS_PUBLIC_KEY=...
-   VITE_EMAILJS_SERVICE_ID=...
-   VITE_EMAILJS_TEMPLATE_OFFER_LETTER=...
-   VITE_EMAILJS_TEMPLATE_PAYMENT=...
-   VITE_EMAILJS_TEMPLATE_CERTIFICATE=...
+   ```text
+   RESEND_API_KEY=re_...
+   RESEND_FROM_EMAIL=portal@example.com
+   RESEND_FROM_NAME=Internship Portal
    ```
 
-Without these values everything works and emails are simply skipped (a console info line is
-logged per skipped send). Full walkthrough: `email-templates/README.md`.
+Do not prefix Resend variables with `VITE_`. The API key must remain server-side. Redeploy after
+changing Vercel environment variables.
 
 ## Roles and how accounts are provisioned
 
@@ -166,7 +160,8 @@ Firestore rules (`firestore.rules`) enforce:
    ```
 
 2. At https://vercel.com → **Add New → Project** → import the repo. Vercel auto-detects Vite.
-3. In **Environment Variables**, add all six `VITE_FIREBASE_*` values from your `.env` (plus the five `VITE_EMAILJS_*` values if you enabled emails).
+3. In **Environment Variables**, add all six `VITE_FIREBASE_*` values from your `.env`, plus
+   `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `RESEND_FROM_NAME` if email delivery is enabled.
 4. **Deploy**.
 5. After deployment, add your `*.vercel.app` (and custom) domain to Firebase
    **Authentication → Authorized domains** for Google sign-in.
@@ -179,10 +174,9 @@ headers (nosniff, referrer policy, X-Frame-Options, CSP).
 ```
 src/
   config/organization.js   # your org details (used in UI + PDFs)
-  config/email.js          # EmailJS config + isEmailConfigured() gate
   firebase/                # firebase config + app init (no-op in demo mode)
   data/                    # auth.js + store.js: unified Firebase/demo data layer
-  services/emailService.js # EmailJS sends (offer letter, payment, certificate)
+  services/emailService.js # Resend client for offer letter, payment, and certificate emails
   context/AuthContext.jsx  # session + profile state
   components/              # layout, route guards (incl. PaymentGate), class card, loaders
   pages/
@@ -195,7 +189,7 @@ src/
     admin/                 # overview, students, mentor approvals, payments, all users
   utils/pdf/               # offerLetter.js + certificate.js (jsPDF generators)
                            # jspdf-fallback.js (offline PDF preview, auto-activated)
-email-templates/             # paste-ready EmailJS template bodies + setup README
+api/send-email.js            # server-side Resend email endpoint
 ```
 
 ## Troubleshooting
@@ -206,10 +200,6 @@ email-templates/             # paste-ready EmailJS template bodies + setup READM
   a printable preview — use the print dialog and choose **Save as PDF**. To restore native PDF
   downloads, run `npm install` on an internet PC, copy `node_modules\jspdf` into this PC's
   `node_modules`, then restart `npm run dev`. No code changes needed.
-- **`Failed to resolve import "@emailjs/browser"`** (offline PC whose `node_modules` predates
-  the EmailJS integration) - run `npm install` on an internet PC and copy
-  `node_modules\@emailjs` (or the whole folder) into this PC's `node_modules`, then restart.
-  Until the `VITE_EMAILJS_*` values are set, emails are skipped anyway.
 - **`auth/invalid-api-key`** — a `.env` with placeholder or partial Firebase values. Delete the
   `.env` (demo mode) or fill all `VITE_FIREBASE_*` values; incomplete config now falls back to
   demo mode with a console warning instead of crashing.

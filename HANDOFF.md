@@ -18,7 +18,7 @@ End-to-end internship portal (React + Vite SPA) for an 8-week online internship 
 - **Payments**: deterministic UPI QR assignment from an admin-managed pool (any number of
   QRs, per-QR UPI ID + enable/disable, global pause switch), one-tap UPI deep link,
   compulsory payment screenshot, admin cross-verification
-- **Emails (EmailJS)**: offer letter on profile completion, payment confirmation on admin
+- **Emails (Resend)**: offer letter on profile completion, payment confirmation on admin
   verification, certificate on completion (paste-ready templates in `email-templates/`)
 - **Access control**: student modules locked until payment verified (Dashboard, Profile,
   Payment stay open); dashboard masks module data while locked
@@ -47,11 +47,6 @@ security headers).
   conditionally aliases it to `src/utils/pdf/jspdf-fallback.js` (a working local
   re-implementation). On an internet PC after `npm install` the real package is detected
   automatically. Never remove the conditional alias.
-- **@emailjs/browser quirk (NEW 2026-11-16)**: this offline PC's node_modules does NOT have
-  `@emailjs/browser` (added to package.json by the EmailJS integration). Until `npm install`
-  runs on the internet PC (or node_modules is copied back), `vite build` and the dev server
-  fail ONLY on the `@emailjs/browser` import in `src/services/emailService.js` - EXPECTED
-  here, not a regression. All other modules transform cleanly.
 - `public/palette-preview.html` is a palette experiment page (4 palettes,
   light/dark/pure-black). Reference only — the live site stays on the original
   indigo/violet palette (see §8).
@@ -83,7 +78,7 @@ function rep([string]$t,[string]$old,[string]$new){ if(-not $t.Contains($old)){t
 - Full log (newest first):
 
 ```
-7dd133b Email notifications via EmailJS: offer letter, payment confirmation, certificate emails + paste-ready templates
+7dd133b Email notifications: offer letter, payment confirmation, and certificate email integration
 6ad11da Security: harden users update rules (no self-issued certs, no role escalation), notification/counter rules, pinned CSP + HSTS
 2727b6b Payments: one-tap UPI deep link (Pay now / Show QR) + compulsory payment screenshot proof
 d7d783f Payments: unlimited QR images (auto-resize), any number of QRs, per-QR disable, global pause switch
@@ -164,14 +159,13 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
 | `src/pages/Verify.jsx` | Public certificate verification (`?c=` deep link) |
 | `src/utils/pdf/{offerLetter,certificate}.js` | PDF generation (jsPDF; fallback engine offline) |
 | `src/config/organization.js` | **Org branding + program details — user must edit for go-live** |
-| `src/config/email.js` | EmailJS env config + `isEmailConfigured()` gate |
-| `email-templates/` | Paste-ready EmailJS template bodies + dashboard setup README |
+| `api/send-email.js` | Server-side Resend email endpoint |
 | `src/components/PaymentGate.jsx` | `usePaymentVerified()` live hook + route guard (student modules locked until payment verified) |
 | `src/pages/student/Payment.jsx` | Pay now (upi://) / Show QR toggle, payment details + compulsory screenshot, paused/verified states |
 | `src/pages/admin/Payment.jsx` | QR pool (add any number, auto-resize, per-QR UPI ID, enable/disable), pause switch, submissions table with proof, verify action |
 | `firestore.rules` | Server-side RBAC for every collection |
 | `vercel.json` | SPA rewrite + CSP/nosniff/XFO/Referrer-Policy headers |
-| `src/services/emailService.js` | EmailJS sends: offer letter, payment confirmation, certificate (skipped when unconfigured) |
+| `src/services/emailService.js` | Resend client: offer letter, payment confirmation, certificate (skipped when unconfigured) |
 | `public/sw.js` + `public/manifest.webmanifest` + `public/icons/*` | PWA (SW registers in PROD builds only) |
 
 ### Data model (Firestore collections / demo keys)
@@ -271,8 +265,9 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
 - Payment gating: `PaymentGate` locks classes/forum/offer-letter/certificate/messages until
   the student's payment is verified (live via onSnapshot). Nav hides locked links; the
   dashboard masks all module data while locked.
-- Emails (EmailJS): offer letter (profile completion), payment confirmation (admin
-  verify), certificate (mentor issue). Skipped (console info) when `VITE_EMAILJS_*` unset.
+- Emails (Resend): offer letter (profile completion), payment confirmation (admin
+  verify), certificate (mentor issue). The browser calls `/api/send-email`; delivery is skipped
+  when server-only Resend variables are unset.
 - PWA: manifest, 4 generated icons (indigo "IP" mark), service worker (shell
   network-first w/ offline fallback, hashed assets cache-first, cross-origin untouched),
   install prompt on login/register (capture `beforeinstallprompt`; iOS shows help text;
@@ -280,7 +275,7 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
 
 ## 6. Go-live checklist (internet PC)
 
-1. `npm install` (real `jspdf` activates automatically via the conditional alias; also installs `@emailjs/browser`).
+1. `npm install` (real `jspdf` activates automatically via the conditional alias).
 2. Firebase console: enable **Google + Email/Password** sign-in; register the web app with
    the domain; put the 6 `VITE_FIREBASE_*` values in `.env`.
 3. **Deploy `firestore.rules`** to Firestore (mandatory — verify page, forum, chat and RBAC
@@ -290,9 +285,8 @@ Every function in `src/data/store.js` and `src/data/auth.js` branches:
 5. Mentors: admin approves their Google email in Admin → Mentors; they sign in with it.
 6. Vercel: add the 6 `VITE_` vars to project environment (build time), deploy.
    HTTPS + headers are automatic. No extra Vercel config for the PWA.
-   EmailJS (optional): follow `email-templates/README.md` - create the service + 3
-   templates in the dashboard, then add the 5 `VITE_EMAILJS_*` vars to `.env` AND the
-   Vercel project env. Without them emails are skipped and everything else works.
+   Resend (optional): create an API key and verified sender, then add `RESEND_API_KEY`,
+   `RESEND_FROM_EMAIL`, and `RESEND_FROM_NAME` to `.env` and Vercel server environment settings.
 7. Update `src/config/organization.js` with the real organization details (it currently
    holds placeholder values).
 
@@ -352,10 +346,6 @@ FIXED in 6ad11da (was loose): notifications create is now self-inbox or staff-on
 - `notifyStudentsOfClass` must be called from a client allowed to list users (mentor/admin).
 - Dead CSS leftovers (`.role-card-mentor`, `.step*`) — harmless.
 - Demo mode real-time is per-browser (localStorage); cross-tab works, cross-device needs Firebase.
-- **Build is RED on this offline PC - EXPECTED, not a regression:** `@emailjs/browser` is
-  in package.json but not installed here (no internet). `vite build` / the dev server fail
-  only on that import in `src/services/emailService.js`. Resolves after `npm install` on
-  the internet PC (or copying node_modules back over).
 
 ## 10. Demo accounts (demo mode only, seeded)
 
